@@ -1,0 +1,191 @@
+/* Default styles without themes */
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: #f9fafb !important;
+  color: #1f2937 !important;
+}
+
+/* Card styling */
+.bg-white,
+.card,
+[class*="bg-white"] {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Button styling */
+.btn-primary,
+.bg-blue-600,
+[class*="bg-blue-"] {
+  background-color: #2563eb !important;
+  color: white !important;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8 !important;
+}
+
+.btn-secondary,
+.bg-gray-300,
+[class*="bg-gray-"] {
+  background-color: #9ca3af !important;
+}
+
+.btn-secondary:hover {
+  background-color: #6b7280 !important;
+}
+
+/* Text colors */
+.text-gray-800,
+.text-gray-900,
+[class*="text-gray-"] {
+  color: #1f2937 !important;
+}
+
+.text-gray-500,
+.text-gray-600,
+.text-gray-700 {
+  color: #4b5563 !important;
+}
+
+/* Contrast text classes */
+.text-contrast-auto {
+  color: #1f2937 !important;
+}
+
+.bg-dark .text-contrast-auto,
+[class*="bg-blue-700"] .text-contrast-auto,
+[class*="bg-green-700"] .text-contrast-auto,
+[class*="bg-red-700"] .text-contrast-auto,
+[class*="bg-purple-700"] .text-contrast-auto,
+[class*="bg-gray-700"] .text-contrast-auto,
+[class*="bg-black"] .text-contrast-auto {
+  color: white !important;
+}
+
+.bg-light .text-contrast-auto,
+[class*="bg-blue-100"] .text-contrast-auto,
+[class*="bg-green-100"] .text-contrast-auto,
+[class*="bg-red-100"] .text-contrast-auto,
+[class*="bg-purple-100"] .text-contrast-auto,
+[class*="bg-gray-100"] .text-contrast-auto,
+[class*="bg-white"] .text-contrast-auto {
+  color: #1f2937 !important;
+}
+
+/* Badge styling */
+.bg-green-100 {
+  background-color: #dcfce7 !important;
+}
+
+.bg-red-100 {
+  background-color: #fee2e2 !important;
+}
+
+.bg-amber-100 {
+  background-color: #fef3c7 !important;
+}
+
+.bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+.bg-purple-100 {
+  background-color: #f3e8ff !important;
+}
+
+.bg-indigo-100 {
+  background-color: #e0e7ff !important;
+}
+
+/* Ensure text contrast in badges */
+.bg-green-100.text-green-800 {
+  color: #166534 !important;
+}
+
+.bg-red-100.text-red-800 {
+  color: #991b1b !important;
+}
+
+.bg-amber-100.text-amber-800 {
+  color: #92400e !important;
+}
+
+.bg-blue-100.text-blue-800 {
+  color: #1e40af !important;
+}
+
+.bg-purple-100.text-purple-800 {
+  color: #6b21a8 !important;
+}
+
+.bg-indigo-100.text-indigo-800 {
+  color: #3730a3 !important;
+}
+
+/* Border colors */
+.border,
+.border-gray-200,
+.border-gray-100,
+[class*="border-gray-"] {
+  border-color: #e5e7eb !important;
+}
+
+/* Background colors for accent elements */
+.bg-blue-50,
+[class*="bg-blue-50"] {
+  background-color: #eff6ff !important;
+}
+
+.bg-green-50,
+[class*="bg-green-50"] {
+  background-color: #f0fdf4 !important;
+}
+
+.bg-purple-50,
+[class*="bg-purple-50"] {
+  background-color: #faf5ff !important;
+}
+
+.bg-amber-50,
+[class*="bg-amber-50"] {
+  background-color: #fffbeb !important;
+}
+
+/* Icon colors */
+.text-blue-600,
+[class*="text-blue-"] {
+  color: #2563eb !important;
+}
+
+.text-green-600,
+[class*="text-green-"] {
+  color: #16a34a !important;
+}
+
+.text-purple-600,
+[class*="text-purple-"] {
+  color: #9333ea !important;
+}
+
+.text-amber-600,
+[class*="text-amber-"] {
+  color: #d97706 !important;
+}
+
+/* Font sizes */
+.text-size-small {
+  font-size: 0.875rem !important;
+}
+
+.text-size-medium {
+  font-size: 1rem !important;
+}
+
+.text-size-large {
+  font-size: 1.125rem !important;
+}
