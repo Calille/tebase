@@ -54,3 +54,11 @@ The client no longer sends `role` in `updateProfile`. Profiles still store
 IT Admin password reset is demo-only. Resetting another user’s password
 requires the service role or a privileged Edge Function, never the anon
 key in the browser.
+
+## Which roles see IT Admin
+
+The client treats `admin` and `director` (case-insensitive) as
+admin-capable: the IT Administration nav item and `/it-admin` route.
+Signup still creates `role: 'user'`. Set the profile role in Supabase
+for staff who should see that screen. This is a product choice — add or
+remove roles in `src/lib/roles.ts` if the agency uses different names.

@@ -27,6 +27,7 @@ import WeeklyReportPage from "./pages/WeeklyReportPage";
 import PayrollPage from "./pages/PayrollPage";
 import ITAdminPage from "./pages/ITAdminPage";
 import AWRTrackingPage from "./pages/AWRTrackingPage";
+import { ADMIN_ROLES } from "./lib/roles";
 import routes from "tempo-routes";
 import React from "react";
 
@@ -91,7 +92,7 @@ function App() {
             <Route path="/complaints" element={<ProtectedRoute><ComplaintsPage /></ProtectedRoute>} />
             <Route path="/directors" element={<ProtectedRoute><DirectorsPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-            <Route path="/it-admin" element={<ProtectedRoute><ITAdminPage /></ProtectedRoute>} />
+            <Route path="/it-admin" element={<ProtectedRoute roles={ADMIN_ROLES}><ITAdminPage /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}

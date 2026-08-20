@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
-import { cn } from "../lib/utils";
-import Sidebar from "./tebase/Sidebar";
+import PageLayout from "./tebase/PageLayout";
 import DemoBanner from "./tebase/shared/DemoBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -25,12 +24,6 @@ import {
 } from "lucide-react";
 
 const Home = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  const handleToggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
-
   // Sample data for low margin bookings
   const lowMarginBookings = [
     {
@@ -85,44 +78,31 @@ const Home = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />
-
-      <main
-        className={cn(
-          "flex-1 h-screen overflow-y-auto transition-all duration-300",
-          sidebarCollapsed ? "ml-[70px]" : "ml-[50px]",
-        )}
-        style={{
-          marginLeft: sidebarCollapsed ? "70px" : "50px",
-          marginRight: 0,
-          paddingLeft: 0,
-        }}
-      >
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between p-4 bg-white border-b sticky top-0 z-10 shadow-sm">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800">
-              Dashboard
-            </h1>
-            <div className="flex gap-2">
-              <Button variant="outline" className="bg-white">
-                <Link to="/weekly-report" className="flex items-center gap-1">
-                  <BarChart3 className="h-4 w-4" />
-                  View Reports
-                </Link>
-              </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Link
-                  to="/bookings"
-                  className="flex items-center gap-1 text-white"
-                >
-                  <Calendar className="h-4 w-4" />
-                  Manage Bookings
-                </Link>
-              </Button>
-            </div>
-          </div>
-
+    <PageLayout
+      variant="fill"
+      title="Dashboard"
+      className="bg-gray-50"
+      headerClassName="bg-white border-b sticky top-0 z-10 shadow-sm"
+      actions={
+        <div className="flex gap-2">
+          <Button variant="outline" className="bg-white">
+            <Link to="/weekly-report" className="flex items-center gap-1">
+              <BarChart3 className="h-4 w-4" />
+              View Reports
+            </Link>
+          </Button>
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Link
+              to="/bookings"
+              className="flex items-center gap-1 text-white"
+            >
+              <Calendar className="h-4 w-4" />
+              Manage Bookings
+            </Link>
+          </Button>
+        </div>
+      }
+    >
           <div className="p-6">
             <div className="max-w-[1400px] mx-auto space-y-6">
               <DemoBanner message="Dashboard figures are sample data until bookings, payroll, and margins are connected to live queries." />
@@ -526,9 +506,7 @@ const Home = () => {
               </div>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 };
 
