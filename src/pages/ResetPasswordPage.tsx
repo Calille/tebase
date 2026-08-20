@@ -6,27 +6,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft } from "lucide-react";
 
-const ForgotPasswordPage = () => {
+const ResetPasswordPage = () => {
   const navigate = useNavigate();
-  const { resetPassword, error, loading } = useAuth();
-  const [email, setEmail] = useState("");
+  const { updatePassword, error, loading } = useAuth();
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
-  const handleResetPassword = async (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email) {
+    setFormError(null);
+
+    if (password.length < 8) {
+      setFormError("Password must be at least 8 characters.");
       return;
     }
-    
-    const { error: resetError } = await resetPassword(email);
-    if (!resetError) {
-      setSuccessMessage("Password reset instructions have been sent to your email.");
+
+    if (password !== confirmPassword) {
+      setFormError("Passwords do not match.");
+      return;
     }
+
+    const { error: updateError } = await updatePassword(password);
+    if (updateError) {
+      setFormError(updateError);
+      return;
+    }
+
+    setSuccessMessage("Your password has been updated. You can sign in now.");
+    setTimeout(() => navigate("/login"), 1500);
   };
-  
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-4">
@@ -36,50 +48,58 @@ const ForgotPasswordPage = () => {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Tebase CRM</h1>
         </div>
-        
+
         <Card>
           <CardHeader>
-            <CardTitle className="text-center">Reset Password</CardTitle>
+            <CardTitle className="text-center">Set a new password</CardTitle>
             <CardDescription className="text-center">
-              Enter your email address and we'll send you instructions to reset your password.
+              Choose a new password for your account.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {error && (
+            {(error || formError) && (
               <Alert variant="destructive" className="mb-4">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{formError || error}</AlertDescription>
               </Alert>
             )}
-            
+
             {successMessage && (
               <Alert className="mb-4 bg-green-50 text-green-800 border-green-200">
                 <AlertDescription>{successMessage}</AlertDescription>
               </Alert>
             )}
-            
-            <form onSubmit={handleResetPassword}>
+
+            <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="password">New password</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Sending..." : "Send Reset Instructions"}
+                  {loading ? "Saving..." : "Update password"}
                 </Button>
               </div>
             </form>
           </CardContent>
           <CardFooter className="flex justify-center">
-            <Button variant="link" onClick={() => navigate("/login")} className="flex items-center">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Login
+            <Button variant="link" onClick={() => navigate("/login")}>
+              Back to login
             </Button>
           </CardFooter>
         </Card>
@@ -88,4 +108,4 @@ const ForgotPasswordPage = () => {
   );
 };
 
-export default ForgotPasswordPage; 
+export default ResetPasswordPage;

@@ -5,6 +5,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./components/home";
 import LoginPage from "./pages/LoginPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import HelpPage from "./pages/HelpPage";
 import TestPage from "./pages/TestPage";
 import TeachersPage from "./pages/TeachersPage";
 import SchoolsPage from "./pages/SchoolsPage";
@@ -59,6 +61,8 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />
             {import.meta.env.DEV && (
               <>
                 <Route path="/test" element={<TestPage />} />

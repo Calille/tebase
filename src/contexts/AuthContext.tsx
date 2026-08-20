@@ -6,12 +6,12 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  signIn: (username: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string, username: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<User>) => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
+  signIn: (username: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, name: string, username: string) => Promise<{ error: string | null }>;
+  signOut: () => Promise<{ error: string | null }>;
+  updateProfile: (updates: Partial<User>) => Promise<{ error: string | null }>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (password: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,13 +77,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (authError) {
         setError(authError);
-        return;
+        return { error: authError };
       }
       
       setUser(authUser);
+      return { error: null };
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign in');
+      const message = err.message || 'An error occurred during sign in';
+      setError(message);
       console.error('Sign in error:', err);
+      return { error: message };
     } finally {
       setLoading(false);
     }
@@ -97,13 +100,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (authError) {
         setError(authError);
-        return;
+        return { error: authError };
       }
       
       setUser(authUser);
+      return { error: null };
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign up');
+      const message = err.message || 'An error occurred during sign up';
+      setError(message);
       console.error('Sign up error:', err);
+      return { error: message };
     } finally {
       setLoading(false);
     }
@@ -117,13 +123,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (authError) {
         setError(authError);
-        return;
+        return { error: authError };
       }
       
       setUser(null);
+      return { error: null };
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign out');
+      const message = err.message || 'An error occurred during sign out';
+      setError(message);
       console.error('Sign out error:', err);
+      return { error: message };
     } finally {
       setLoading(false);
     }
@@ -131,8 +140,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateProfile = async (updates: Partial<User>) => {
     if (!user) {
-      setError('No authenticated user');
-      return;
+      const message = 'No authenticated user';
+      setError(message);
+      return { error: message };
     }
     
     setLoading(true);
@@ -142,13 +152,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (authError) {
         setError(authError);
-        return;
+        return { error: authError };
       }
       
       setUser(updatedUser);
+      return { error: null };
     } catch (err: any) {
-      setError(err.message || 'An error occurred updating profile');
+      const message = err.message || 'An error occurred updating profile';
+      setError(message);
       console.error('Update profile error:', err);
+      return { error: message };
     } finally {
       setLoading(false);
     }
@@ -162,10 +175,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (authError) {
         setError(authError);
+        return { error: authError };
       }
+      return { error: null };
     } catch (err: any) {
-      setError(err.message || 'An error occurred sending reset password email');
+      const message = err.message || 'An error occurred sending reset password email';
+      setError(message);
       console.error('Reset password error:', err);
+      return { error: message };
     } finally {
       setLoading(false);
     }
@@ -179,10 +196,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (authError) {
         setError(authError);
+        return { error: authError };
       }
+      return { error: null };
     } catch (err: any) {
-      setError(err.message || 'An error occurred updating password');
+      const message = err.message || 'An error occurred updating password';
+      setError(message);
       console.error('Update password error:', err);
+      return { error: message };
     } finally {
       setLoading(false);
     }

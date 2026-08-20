@@ -32,10 +32,8 @@ const LoginPage = () => {
       return;
     }
     
-    await signIn(loginUsername, loginPassword);
-    
-    // If no error, redirect to dashboard
-    if (!error) {
+    const { error: signInError } = await signIn(loginUsername, loginPassword);
+    if (!signInError) {
       navigate("/");
     }
   };
@@ -54,10 +52,8 @@ const LoginPage = () => {
       return;
     }
     
-    await signUp(registerEmail, registerPassword, registerName, registerUsername);
-    
-    // If no error, redirect to dashboard
-    if (!error) {
+    const { error: signUpError } = await signUp(registerEmail, registerPassword, registerName, registerUsername);
+    if (!signUpError) {
       navigate("/");
     }
   };
