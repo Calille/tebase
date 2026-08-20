@@ -70,7 +70,7 @@ This is a Vite SPA. `vercel.json` rewrites every path to `index.html` so React R
    - Site URL: `https://<your-domain>`
    - Redirect URLs: `https://<your-domain>/reset-password` and the matching Vercel preview URLs
 
-A Vercel build fails if the two `VITE_SUPABASE_*` variables are missing. A deploy that still has empty values shows a configuration screen instead of a blank page.
+A deploy that is missing those variables still builds, then shows a configuration screen instead of a blank page.
 
 ## Supabase Setup
 
