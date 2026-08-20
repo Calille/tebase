@@ -59,8 +59,12 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/test" element={<TestPage />} />
-            <Route path="/test-no-auth" element={<TestComponent />} />
+            {import.meta.env.DEV && (
+              <>
+                <Route path="/test" element={<TestPage />} />
+                <Route path="/test-no-auth" element={<TestComponent />} />
+              </>
+            )}
             <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
             <Route path="/teachers" element={<ProtectedRoute><TeachersPage /></ProtectedRoute>} />
             <Route path="/teachers/new" element={<ProtectedRoute><Suspense fallback={<p>Loading...</p>}><NewTeacherPage /></Suspense></ProtectedRoute>} />

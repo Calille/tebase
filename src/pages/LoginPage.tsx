@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,6 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { signIn, signUp, error, loading } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
-  
-  // Add console log to debug
-  useEffect(() => {
-    console.log("LoginPage mounted");
-    console.log("Current auth state:", { error, loading });
-  }, [error, loading]);
   
   // Login form state
   const [loginUsername, setLoginUsername] = useState("");

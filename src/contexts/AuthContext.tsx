@@ -38,9 +38,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkUser = async () => {
       try {
         setLoading(true);
-        console.log("Checking for existing user session...");
         const currentUser = await authService.getCurrentUser();
-        console.log("Current user:", currentUser);
         setUser(currentUser);
       } catch (err) {
         console.error('Error checking authentication:', err);
@@ -52,10 +50,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     checkUser();
 
-    // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event, session ? "Session exists" : "No session");
+      async (event) => {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           const currentUser = await authService.getCurrentUser();
           setUser(currentUser);
