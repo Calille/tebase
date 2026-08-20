@@ -37,6 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { CalendarIcon, Loader2, Upload, User } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -152,42 +153,21 @@ const TeacherPersonalInfo = ({
       
       // Handle profile image upload if there's a new image
       if (imageFile) {
-        // In a real implementation, you would upload the image to a storage service
-        // and get back a URL to store in the database
-        console.log("Uploading profile image:", imageFile.name);
-        // formattedData.t_profile_image_url = "https://example.com/uploaded-image.jpg";
+        toastDemoAction(
+          "Profile image selected",
+          "File upload is not connected yet. The filename is kept in this session only."
+        );
       }
       
-      // If there's a teacherId, update the existing teacher
       if (teacherId) {
-        const success = await teacherService.updateTeacher(teacherId, formattedData);
-        
-        if (success) {
-          toast({
-            title: "Success",
-            description: "Personal information updated successfully",
-          });
-          
-          if (onSave) {
-            onSave(formattedData);
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to update personal information",
-            variant: "destructive",
-          });
-        }
-      } else {
-        // If there's no teacherId, this is a new teacher
-        if (onSave) {
+        const result = await teacherService.updateTeacher(teacherId, formattedData);
+        toastWriteResult("Personal information updated", result);
+        if (result.ok && onSave) {
           onSave(formattedData);
         }
-        
-        toast({
-          title: "Success",
-          description: "Personal information saved",
-        });
+      } else if (onSave) {
+        onSave(formattedData);
+        toastDemoAction("Personal information saved");
       }
     } catch (error) {
       console.error("Error saving personal information:", error);

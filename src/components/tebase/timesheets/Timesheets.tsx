@@ -53,6 +53,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toastDemoAction } from "@/lib/persistence";
 
 interface Timesheet {
   id: string;
@@ -179,8 +180,7 @@ const Timesheets = () => {
   };
 
   const handleAddTimesheet = () => {
-    // Logic to add timesheet would go here
-    console.log("Adding timesheet:", newTimesheet);
+    toastDemoAction("Timesheet added");
     setIsAddDialogOpen(false);
   };
 

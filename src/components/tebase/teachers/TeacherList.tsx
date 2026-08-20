@@ -63,6 +63,8 @@ import {
 } from "lucide-react";
 import { Teacher, teacherService } from "@/services/teacherService";
 import { Link } from "react-router-dom";
+import DemoBanner from "@/components/tebase/shared/DemoBanner";
+import { toastWriteResult } from "@/lib/persistence";
 
 interface TeacherListProps {
   teachers?: Teacher[];
@@ -195,8 +197,8 @@ const TeacherList = ({
     email: "",
     phone: "",
     subjects: [] as string[],
-    status: "pending" as const,
-    availability: "part-time" as const,
+    status: "pending" as Teacher["status"],
+    availability: "part-time" as Teacher["availability"],
   });
 
   const itemsPerPage = 5;
@@ -325,10 +327,12 @@ const TeacherList = ({
         favorite: false,
       };
 
-      const createdTeacher = await teacherService.createTeacher(teacherData);
-      
-      if (createdTeacher) {
-        setTeachers([...teachers, createdTeacher]);
+      const result = await teacherService.createTeacher(teacherData);
+
+      toastWriteResult("Teacher created", result);
+
+      if (result.data) {
+        setTeachers([...teachers, result.data]);
         setIsAddDialogOpen(false);
         setNewTeacher({
           name: "",
@@ -348,9 +352,9 @@ const TeacherList = ({
   // Handle toggle favorite
   const handleToggleFavorite = async (teacherId: string, isFavorite: boolean) => {
     try {
-      const success = await teacherService.toggleFavorite(teacherId, !isFavorite);
-      
-      if (success) {
+      const result = await teacherService.toggleFavorite(teacherId, !isFavorite);
+
+      if (result.ok) {
         setTeachers(
           teachers.map((teacher) =>
             teacher.id === teacherId
@@ -414,6 +418,8 @@ const TeacherList = ({
   };
 
   return (
+    <div className="space-y-4">
+    <DemoBanner />
     <div className="w-full bg-white rounded-lg shadow-sm border">
       <div className="p-4 border-b">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
@@ -990,6 +996,7 @@ const TeacherList = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 };

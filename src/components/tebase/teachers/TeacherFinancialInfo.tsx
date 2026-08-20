@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { Loader2, Lock } from "lucide-react";
 import { teacherService } from "@/services/teacherService";
@@ -141,36 +142,15 @@ const TeacherFinancialInfo = ({
         t_paypal_email: data.paymentMethod === "paypal" ? data.paypalEmail : null,
       };
       
-      // If there's a teacherId, update the existing teacher
       if (teacherId) {
-        const success = await teacherService.updateTeacher(teacherId, formattedData);
-        
-        if (success) {
-          toast({
-            title: "Success",
-            description: "Financial information updated successfully",
-          });
-          
-          if (onSave) {
-            onSave(formattedData);
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to update financial information",
-            variant: "destructive",
-          });
-        }
-      } else {
-        // If there's no teacherId, this is a new teacher
-        if (onSave) {
+        const result = await teacherService.updateTeacher(teacherId, formattedData);
+        toastWriteResult("Financial information updated", result);
+        if (result.ok && onSave) {
           onSave(formattedData);
         }
-        
-        toast({
-          title: "Success",
-          description: "Financial information saved",
-        });
+      } else if (onSave) {
+        onSave(formattedData);
+        toastDemoAction("Financial information saved");
       }
     } catch (error) {
       console.error("Error saving financial information:", error);

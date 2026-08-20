@@ -2,7 +2,8 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import SchoolProfile from "@/components/tebase/schools/SchoolProfile";
 import { toast } from "@/components/ui/use-toast";
-import { schoolService } from "@/services/schoolService";
+import { schoolService, School } from "@/services/schoolService";
+import { toastWriteResult } from "@/lib/persistence";
 
 const NewSchoolPage = () => {
   const navigate = useNavigate();
@@ -11,15 +12,13 @@ const NewSchoolPage = () => {
     navigate("/schools");
   };
 
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: School) => {
     try {
-      const newSchoolId = await schoolService.createSchool(data);
-      toast({
-        title: "School created",
-        description: "The school has been successfully created.",
-        variant: "default",
-      });
-      navigate(`/schools/${newSchoolId}`);
+      const result = await schoolService.createSchool(data);
+      toastWriteResult("School created", result);
+      if (result.data) {
+        navigate(`/schools/${result.data.id}`);
+      }
     } catch (error) {
       console.error("Error creating school:", error);
       toast({

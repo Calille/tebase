@@ -42,6 +42,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
+import { toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { CalendarIcon, FileText, Upload, AlertTriangle, CheckCircle, Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -92,38 +93,24 @@ const TeacherDocuments = ({
         expiryDate: date ? format(date, "yyyy-MM-dd") : "",
       };
 
-      const success = await teacherService.addTeacherDocument(
+      const result = await teacherService.addTeacherDocument(
         teacherId,
         formattedDocument
       );
 
-      if (success) {
-        toast({
-          title: "Success",
-          description: "Document added successfully",
-        });
-        
-        // Reset form
+      toastWriteResult("Document added", result);
+
+      if (result.ok) {
         setNewDocument({
           name: "",
           status: "pending",
           expiryDate: "",
         });
         setDate(undefined);
-        
-        // Close dialog
         setIsAddDialogOpen(false);
-        
-        // Notify parent component
         if (onDocumentAdded) {
           onDocumentAdded();
         }
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to add document",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       console.error("Error adding document:", error);

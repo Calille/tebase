@@ -27,6 +27,7 @@ import { Loader2, MoreHorizontal, Plus, Search } from "lucide-react";
 import { schoolService, School } from "@/services/schoolService";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { toastWriteResult } from "@/lib/persistence";
 
 const SchoolsPage = () => {
   const navigate = useNavigate();
@@ -86,13 +87,11 @@ const SchoolsPage = () => {
   const handleDeleteSchool = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this school?")) {
       try {
-        await schoolService.deleteSchool(id);
-        setSchools(schools.filter((school) => school.id !== id));
-        toast({
-          title: "School deleted",
-          description: "The school has been successfully deleted.",
-          variant: "default",
-        });
+        const result = await schoolService.deleteSchool(id);
+        toastWriteResult("School deleted", result);
+        if (result.ok) {
+          setSchools(schools.filter((school) => school.id !== id));
+        }
       } catch (err) {
         console.error("Error deleting school:", err);
         toast({

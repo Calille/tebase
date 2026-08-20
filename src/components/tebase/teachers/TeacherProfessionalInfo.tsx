@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { CalendarIcon, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -185,42 +186,21 @@ const TeacherProfessionalInfo = ({
       
       // Handle resume file upload if there's a new file
       if (resumeFile) {
-        // In a real implementation, you would upload the file to a storage service
-        // and get back a URL to store in the database
-        console.log("Uploading resume file:", resumeFile.name);
-        // formattedData.t_resume_url = "https://example.com/uploaded-resume.pdf";
+        toastDemoAction(
+          "Resume selected",
+          "File upload is not connected yet. The filename is kept in this session only."
+        );
       }
       
-      // If there's a teacherId, update the existing teacher
       if (teacherId) {
-        const success = await teacherService.updateTeacher(teacherId, formattedData);
-        
-        if (success) {
-          toast({
-            title: "Success",
-            description: "Professional information updated successfully",
-          });
-          
-          if (onSave) {
-            onSave(formattedData);
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to update professional information",
-            variant: "destructive",
-          });
-        }
-      } else {
-        // If there's no teacherId, this is a new teacher
-        if (onSave) {
+        const result = await teacherService.updateTeacher(teacherId, formattedData);
+        toastWriteResult("Professional information updated", result);
+        if (result.ok && onSave) {
           onSave(formattedData);
         }
-        
-        toast({
-          title: "Success",
-          description: "Professional information saved",
-        });
+      } else if (onSave) {
+        onSave(formattedData);
+        toastDemoAction("Professional information saved");
       }
     } catch (error) {
       console.error("Error saving professional information:", error);

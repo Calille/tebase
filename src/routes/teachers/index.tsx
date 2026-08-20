@@ -27,6 +27,7 @@ import { Loader2, Plus, Search, MoreHorizontal, Eye, Pencil, Trash2 } from "luci
 import { teacherService, Teacher } from "@/services/teacherService";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { toastWriteResult } from "@/lib/persistence";
 
 const TeachersListPage = () => {
   const navigate = useNavigate();
@@ -68,20 +69,10 @@ const TeachersListPage = () => {
   const handleDeleteTeacher = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete ${name}?`)) {
       try {
-        const success = await teacherService.deleteTeacher(id);
-        if (success) {
-          toast({
-            title: "Teacher Deleted",
-            description: `${name} has been deleted successfully.`,
-          });
-          // Refresh the list
+        const result = await teacherService.deleteTeacher(id);
+        toastWriteResult(`${name} deleted`, result);
+        if (result.ok) {
           fetchTeachers();
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to delete teacher",
-            variant: "destructive",
-          });
         }
       } catch (error) {
         console.error("Error deleting teacher:", error);

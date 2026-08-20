@@ -1,4 +1,11 @@
-import { supabase } from '@/lib/supabase';
+import {
+  CreateResult,
+  WriteResult,
+  demoCreateResult,
+  demoWriteResult,
+  failedCreateResult,
+  failedWriteResult,
+} from "@/lib/persistence";
 
 export interface School {
   id: string;
@@ -106,13 +113,13 @@ export interface School {
     uploadDate: string;
     url: string;
   }[];
+  favorite?: boolean;
 }
 
-export const schoolService = {
-  async getSchools(): Promise<School[]> {
-    try {
-      // For mock implementation, return some sample schools
-      const mockSchools: School[] = [
+let schoolsStore: School[] | null = null;
+
+function seedSchools(): School[] {
+  return [
         {
           id: 'school-1',
           name: 'Oakwood Primary School',
@@ -354,181 +361,165 @@ export const schoolService = {
           ]
         }
       ];
-      
-      return mockSchools;
-    } catch (error) {
-      console.error('Error fetching schools:', error);
-      return [];
-    }
+}
+
+function getSchoolStore(): School[] {
+  if (!schoolsStore) {
+    schoolsStore = seedSchools();
+  }
+  return schoolsStore;
+}
+
+function emptyContact() {
+  return {
+    name: "",
+    position: "",
+    phone: "",
+    email: "",
+    preferredContactMethod: "email",
+    notes: "",
+    verified: false,
+    lastContactDate: "",
+  };
+}
+
+function schoolFromPartial(
+  input: Partial<School> | Record<string, unknown>,
+  id: string
+): School {
+  const partial = input as Partial<School>;
+  const record = input as Record<string, unknown>;
+  const addressInput = partial.address ?? record.address;
+  const address =
+    addressInput && typeof addressInput === "object"
+      ? (addressInput as School["address"])
+      : {
+          street: typeof addressInput === "string" ? addressInput : "",
+          city: typeof record.city === "string" ? record.city : "",
+          state: "",
+          zip: "",
+          country: "United Kingdom",
+        };
+
+  return {
+    id,
+    name: partial.name || "New School",
+    type: partial.type || "primary",
+    address,
+    phone: partial.phone || "",
+    website: partial.website || "",
+    district: partial.district || "",
+    yearEstablished: partial.yearEstablished || new Date().getFullYear(),
+    numberOfStudents: partial.numberOfStudents || 0,
+    gradeLevels: partial.gradeLevels || [],
+    schoolHours: partial.schoolHours || "",
+    primaryContact: partial.primaryContact || {
+      ...emptyContact(),
+      name: typeof record.contactPerson === "string" ? record.contactPerson : "",
+      email: typeof record.email === "string" ? record.email : "",
+    },
+    secondaryContact: partial.secondaryContact || emptyContact(),
+    financeContact: partial.financeContact || {
+      ...emptyContact(),
+      billingAddress: address,
+      invoicingPreferences: "",
+      paymentTerms: "",
+      purchaseOrderRequired: false,
+    },
+    sendcoContact: partial.sendcoContact || {
+      ...emptyContact(),
+      specializations: [],
+      availability: "",
+    },
+    headteacherContact: partial.headteacherContact || {
+      ...emptyContact(),
+      assistantInfo: "",
+      bestTimeToContact: "",
+    },
+    specialPrograms: partial.specialPrograms || [],
+    keyDates: partial.keyDates || [],
+    substituteRequirements: partial.substituteRequirements || "",
+    historicalPlacementNotes: partial.historicalPlacementNotes || "",
+    administrativeNotes: partial.administrativeNotes || "",
+    documents: partial.documents || [],
+    favorite: Boolean(partial.favorite ?? record.favorite),
+  };
+}
+
+/**
+ * School records are session-local sample data until the nested TypeScript
+ * model is aligned with the Supabase schema. Writes update this store only.
+ */
+export const schoolService = {
+  async getSchools(): Promise<School[]> {
+    return getSchoolStore().map((school) => ({ ...school }));
   },
 
   async getSchoolById(id: string): Promise<School | null> {
+    const school = getSchoolStore().find((item) => item.id === id);
+    return school ? { ...school } : null;
+  },
+
+  async createSchool(
+    school: Partial<School> | Record<string, unknown>
+  ): Promise<CreateResult<School>> {
     try {
-      // For mock implementation, return a sample school based on ID
-      // First check if it's one of our predefined schools
-      const mockSchools = await this.getSchools();
-      const existingSchool = mockSchools.find(school => school.id === id);
-      
-      if (existingSchool) {
-        return existingSchool;
-      }
-      
-      // If not found, create a mock school with the given ID
-      const mockSchool: School = {
-        id,
-        name: `School ${id.split('-')[1] || id}`,
-        type: 'public',
-        address: {
-          street: '123 Example Street',
-          city: 'London',
-          state: 'Greater London',
-          zip: 'SW1A 1AA',
-          country: 'United Kingdom'
-        },
-        phone: '020 1234 5678',
-        website: 'https://www.example-school.edu.uk',
-        district: 'Example District',
-        yearEstablished: 2000,
-        numberOfStudents: 500,
-        gradeLevels: ['Reception', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6'],
-        schoolHours: '9:00 AM - 3:30 PM',
-        
-        primaryContact: {
-          name: 'John Doe',
-          position: 'Administrator',
-          phone: '020 1234 5679',
-          email: 'jdoe@example-school.edu.uk',
-          preferredContactMethod: 'email',
-          notes: '',
-          verified: false,
-          lastContactDate: ''
-        },
-        
-        secondaryContact: {
-          name: '',
-          position: '',
-          phone: '',
-          email: '',
-          preferredContactMethod: '',
-          notes: '',
-          verified: false,
-          lastContactDate: ''
-        },
-        
-        financeContact: {
-          name: '',
-          position: '',
-          phone: '',
-          email: '',
-          billingAddress: {
-            street: '',
-            city: '',
-            state: '',
-            zip: '',
-            country: ''
-          },
-          invoicingPreferences: '',
-          paymentTerms: '',
-          purchaseOrderRequired: false,
-          verified: false,
-          lastContactDate: ''
-        },
-        
-        sendcoContact: {
-          name: '',
-          position: '',
-          phone: '',
-          email: '',
-          specializations: [],
-          availability: '',
-          notes: '',
-          verified: false,
-          lastContactDate: ''
-        },
-        
-        headteacherContact: {
-          name: '',
-          position: '',
-          phone: '',
-          email: '',
-          assistantInfo: '',
-          bestTimeToContact: '',
-          verified: false,
-          lastContactDate: ''
-        },
-        
-        specialPrograms: [],
-        keyDates: [],
-        substituteRequirements: '',
-        historicalPlacementNotes: '',
-        administrativeNotes: '',
-        
-        documents: []
-      };
-      
-      return mockSchool;
+      const newSchool = schoolFromPartial(school, `school-${Date.now()}`);
+      getSchoolStore().push(newSchool);
+      return demoCreateResult({ ...newSchool });
     } catch (error) {
-      console.error(`Error fetching school with ID ${id}:`, error);
-      return null;
+      console.error("Error creating school:", error);
+      return failedCreateResult(
+        error instanceof Error ? error.message : "Failed to create school"
+      );
     }
   },
 
-  async createSchool(school: Omit<School, 'id'>): Promise<School | null> {
-    try {
-      // For mock implementation, generate a random ID
-      const newSchool: School = {
-        ...school,
-        id: `school-${Date.now()}`,
-      };
-      
-      console.log('Creating school:', newSchool);
-      
-      // In a real implementation, this would save to the database
-      // For now, just return the new school with the generated ID
-      return newSchool;
-    } catch (error) {
-      console.error('Error creating school:', error);
-      return null;
+  async updateSchool(id: string, school: Partial<School>): Promise<WriteResult> {
+    const store = getSchoolStore();
+    const index = store.findIndex((item) => item.id === id);
+    if (index === -1) {
+      return failedWriteResult("School not found");
     }
+
+    store[index] = { ...store[index], ...school };
+    return demoWriteResult();
   },
 
-  async updateSchool(id: string, school: Partial<School>): Promise<boolean> {
-    try {
-      console.log(`Updating school ${id}:`, school);
-      
-      // In a real implementation, this would update the database
-      // For now, just return success
-      return true;
-    } catch (error) {
-      console.error(`Error updating school ${id}:`, error);
-      return false;
+  async deleteSchool(id: string): Promise<WriteResult> {
+    const store = getSchoolStore();
+    const index = store.findIndex((item) => item.id === id);
+    if (index === -1) {
+      return failedWriteResult("School not found");
     }
+
+    store.splice(index, 1);
+    return demoWriteResult();
   },
 
-  async deleteSchool(id: string): Promise<boolean> {
-    try {
-      console.log(`Deleting school ${id}`);
-      
-      // In a real implementation, this would delete from the database
-      // For now, just return success
-      return true;
-    } catch (error) {
-      console.error(`Error deleting school ${id}:`, error);
-      return false;
-    }
+  async toggleFavorite(id: string, isFavorite: boolean): Promise<WriteResult> {
+    return this.updateSchool(id, { favorite: isFavorite });
   },
 
-  async addSchoolDocument(schoolId: string, document: { name: string; type: string; url: string }): Promise<boolean> {
-    try {
-      console.log(`Adding document to school ${schoolId}:`, document);
-      
-      // In a real implementation, this would add to the database
-      // For now, just return success
-      return true;
-    } catch (error) {
-      console.error(`Error adding document to school ${schoolId}:`, error);
-      return false;
+  async addSchoolDocument(
+    schoolId: string,
+    document: { name: string; type: string; url: string }
+  ): Promise<WriteResult> {
+    const store = getSchoolStore();
+    const index = store.findIndex((item) => item.id === schoolId);
+    if (index === -1) {
+      return failedWriteResult("School not found");
     }
+
+    const documents = [
+      ...(store[index].documents || []),
+      {
+        ...document,
+        uploadDate: new Date().toISOString().slice(0, 10),
+      },
+    ];
+    store[index] = { ...store[index], documents };
+    return demoWriteResult();
   },
 
   async searchSchools(query: string): Promise<School[]> {
@@ -556,7 +547,12 @@ export class SchoolService {
    * @param schoolId The ID of the school to retrieve
    * @returns A promise that resolves to the school object or null if not found
    */
-  static async getSchoolById(schoolId: string): Promise<School | null> {
+  static async getSchoolById(schoolId: string): Promise<{
+    id: string;
+    name: string;
+    contactName: string;
+    contactEmail: string;
+  } | null> {
     try {
       // In a real application, this would fetch from a database or API
       // For demo purposes, we'll return mock data
@@ -578,7 +574,12 @@ export class SchoolService {
    * Get all schools
    * @returns A promise that resolves to an array of school objects
    */
-  static async getAllSchools(): Promise<School[]> {
+  static async getAllSchools(): Promise<Array<{
+    id: string;
+    name: string;
+    contactName: string;
+    contactEmail: string;
+  }>> {
     try {
       // In a real application, this would fetch from a database or API
       // For demo purposes, we'll return mock data
@@ -596,7 +597,12 @@ export class SchoolService {
   /**
    * Mock school data for demonstration purposes
    */
-  private static mockSchools: School[] = [
+  private static mockSchools: Array<{
+    id: string;
+    name: string;
+    contactName: string;
+    contactEmail: string;
+  }> = [
     {
       id: "s1",
       name: "Oakridge Secondary School",

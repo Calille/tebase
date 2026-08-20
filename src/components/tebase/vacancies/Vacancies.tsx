@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toastDemoAction } from "@/lib/persistence";
 import {
   Search,
   Filter,
@@ -63,7 +64,7 @@ const Vacancies = () => {
     schoolId: "",
     location: "",
     subject: "",
-    type: "full-time" as const,
+    type: "full-time",
     startDate: "",
     endDate: "",
     rate: 0,
@@ -234,8 +235,7 @@ const Vacancies = () => {
   };
 
   const handleAddVacancy = () => {
-    // Logic to add vacancy would go here
-    console.log("Adding vacancy:", newVacancy);
+    toastDemoAction("Vacancy posted");
     setIsAddDialogOpen(false);
   };
 
@@ -453,9 +453,9 @@ const Vacancies = () => {
               </label>
               <Select
                 value={newVacancy.type}
-                onValueChange={(
-                  value: "full-time" | "part-time" | "temporary",
-                ) => setNewVacancy({ ...newVacancy, type: value })}
+                onValueChange={(value) =>
+                  setNewVacancy({ ...newVacancy, type: value })
+                }
               >
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Select type" />

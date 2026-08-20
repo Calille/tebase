@@ -20,6 +20,6 @@
     }
   },
   "include": ["src"],
-  "exclude": ["src/tempobook"],
+  "exclude": ["src/tempobook", "src/components/crm", "src/stories", "src/app"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

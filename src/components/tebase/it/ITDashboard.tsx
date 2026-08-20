@@ -54,6 +54,7 @@ import {
   FileText,
   Download,
 } from "lucide-react";
+import { toastDemoAction } from "@/lib/persistence";
 
 const ITDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -218,17 +219,20 @@ const ITDashboard = () => {
 
   // Confirm reset password
   const confirmResetPassword = () => {
-    // In a real app, this would call an API to reset the password
-    console.log(`Password reset for user ${selectedUser}: ${newPassword}`);
+    toastDemoAction(
+      "Password reset",
+      "Resetting another user's password needs a server-side admin API. Nothing was changed."
+    );
     setIsResetPasswordOpen(false);
     setNewPassword("");
     setSelectedUser(null);
   };
 
-  // Confirm delete user
   const confirmDeleteUser = () => {
-    // In a real app, this would call an API to delete the user
-    console.log(`User deleted: ${selectedUser}`);
+    toastDemoAction(
+      "User deleted",
+      "Deleting users needs a server-side admin API. Nothing was changed."
+    );
     setIsDeleteUserOpen(false);
     setSelectedUser(null);
   };

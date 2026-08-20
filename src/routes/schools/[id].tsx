@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import SchoolProfile from "@/components/tebase/schools/SchoolProfile";
 import { Loader2 } from "lucide-react";
-import { schoolService } from "@/services/schoolService";
+import { schoolService, School } from "@/services/schoolService";
 
 const SchoolDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,10 +41,8 @@ const SchoolDetailPage = () => {
     navigate("/schools");
   };
 
-  const handleSave = (data: any) => {
-    console.log("School data saved:", data);
-    // Optionally navigate back to the schools list
-    // navigate("/schools");
+  const handleSave = (_data: School) => {
+    // Profile component already reports demo vs persisted status.
   };
 
   if (loading) {

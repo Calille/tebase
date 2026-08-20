@@ -10,11 +10,17 @@ import { Lock, Palette, Bell, User, Shield, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { useAuth } from "@/contexts/AuthContext";
+import { authService } from "@/services/authService";
+import { toastDemoAction } from "@/lib/persistence";
 
 const Settings = () => {
+  const { user, updateProfile } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [theme, setTheme] = useState("blue");
   const [notifications, setNotifications] = useState(true);
   const [fontSize, setFontSize] = useState("medium");
@@ -56,25 +62,61 @@ const Settings = () => {
     if (savedFontSize) {
       setFontSize(savedFontSize);
     }
-  }, []);
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+    if (user?.name) {
+      setAccountName(user.name);
+    }
+  }, [user]);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Password change logic would go here
-    console.log("Password change requested", {
-      currentPassword,
-      newPassword,
-      confirmPassword,
-    });
-    // Reset form
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    
-    toast({
-      title: "Password Changed",
-      description: "Your password has been updated successfully.",
-    });
+
+    if (!newPassword || newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New password and confirmation must match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Error",
+        description: "New password must be at least 8 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const { error } = await authService.updatePassword(newPassword);
+      if (error) {
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast({
+        title: "Password changed",
+        description: "Your password has been updated.",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Could not update your password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleThemeChange = (value: string) => {
@@ -155,12 +197,7 @@ const Settings = () => {
   };
 
   const handleSaveNotifications = () => {
-    // Save notification preferences
-    console.log("Notification preferences saved:", { notifications });
-    toast({
-      title: "Notification Settings Saved",
-      description: "Your notification preferences have been updated.",
-    });
+    toastDemoAction("Notification preferences saved");
   };
 
   // Helper function to get CSS variable values for the theme preview
@@ -234,16 +271,34 @@ const Settings = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" defaultValue="Admin User" />
+                <Input
+                  id="name"
+                  value={accountName || user?.name || ""}
+                  onChange={(e) => setAccountName(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" defaultValue="admin@keepeducation.com" />
+                <Input id="email" value={user?.email || ""} disabled />
               </div>
-              <Button onClick={() => {
+              <Button onClick={async () => {
+                if (!user) {
+                  toastDemoAction("Account updated");
+                  return;
+                }
+                const { error } = await authService.updateProfile(user.id, { name: accountName });
+                if (error) {
+                  toast({
+                    title: "Error",
+                    description: error,
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                await updateProfile({ name: accountName });
                 toast({
-                  title: "Account Updated",
-                  description: "Your account information has been saved successfully.",
+                  title: "Account updated",
+                  description: "Your name has been saved.",
                 });
               }}>Save Changes</Button>
             </CardContent>

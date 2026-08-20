@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toastDemoAction } from "@/lib/persistence";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,8 +71,8 @@ const Complaints = () => {
   const [newComplaint, setNewComplaint] = useState({
     title: "",
     description: "",
-    type: "teacher" as const,
-    severity: "medium" as const,
+    type: "teacher",
+    severity: "medium",
   });
 
   // Sample complaints data
@@ -222,8 +223,7 @@ const Complaints = () => {
 
   // Handle add complaint
   const handleAddComplaint = () => {
-    // Logic to add complaint would go here
-    console.log("Adding complaint:", newComplaint);
+    toastDemoAction("Complaint logged");
     setIsAddDialogOpen(false);
     // Reset form
     setNewComplaint({
@@ -621,9 +621,9 @@ const Complaints = () => {
               </label>
               <Select
                 value={newComplaint.type}
-                onValueChange={(
-                  value: "teacher" | "school" | "system" | "other",
-                ) => setNewComplaint({ ...newComplaint, type: value })}
+                onValueChange={(value) =>
+                  setNewComplaint({ ...newComplaint, type: value })
+                }
               >
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Select type" />
@@ -642,7 +642,7 @@ const Complaints = () => {
               </label>
               <Select
                 value={newComplaint.severity}
-                onValueChange={(value: "low" | "medium" | "high") =>
+                onValueChange={(value) =>
                   setNewComplaint({ ...newComplaint, severity: value })
                 }
               >

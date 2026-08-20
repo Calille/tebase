@@ -69,6 +69,8 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Booking, bookingService } from "@/services/bookingService";
+import DemoBanner from "@/components/tebase/shared/DemoBanner";
+import { toast } from "@/components/ui/use-toast";
 
 interface BookingListProps {
   bookings?: Booking[];
@@ -225,6 +227,7 @@ const BookingList = ({
   const [bookings, setBookings] = useState<Booking[]>(
     initialBookings || defaultBookings,
   );
+  const [usingSampleData, setUsingSampleData] = useState(!initialBookings);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -317,6 +320,9 @@ const BookingList = ({
         const data = await bookingService.getBookings();
         if (data.length > 0) {
           setBookings(data);
+          setUsingSampleData(false);
+        } else {
+          setUsingSampleData(true);
         }
       } catch (err) {
         console.error("Failed to fetch bookings:", err);
@@ -396,6 +402,17 @@ const BookingList = ({
       if (createdBooking) {
         setBookings([...bookings, createdBooking]);
         setIsAddDialogOpen(false);
+        setUsingSampleData(false);
+        toast({
+          title: "Booking created",
+          description: "The booking has been saved.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not save this booking to the database.",
+          variant: "destructive",
+        });
       }
     } catch (err) {
       console.error("Failed to add booking:", err);
@@ -474,6 +491,10 @@ const BookingList = ({
   };
 
   return (
+    <div className="space-y-4">
+    {usingSampleData && (
+      <DemoBanner message="Showing sample bookings because none were returned from the database." />
+    )}
     <div className="w-full bg-white rounded-lg shadow-sm border">
       <div className="p-4 border-b">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
@@ -1048,10 +1069,11 @@ const BookingList = ({
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => handleAddBooking(newBooking)}>Add Booking</Button>
+            <Button onClick={() => handleAddBooking(newBooking as unknown as Omit<Booking, "id">)}>Add Booking</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 };

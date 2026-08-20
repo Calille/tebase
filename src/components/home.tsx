@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { cn } from "../lib/utils";
 import Sidebar from "./tebase/Sidebar";
+import DemoBanner from "./tebase/shared/DemoBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -124,6 +125,7 @@ const Home = () => {
 
           <div className="p-6">
             <div className="max-w-[1400px] mx-auto space-y-6">
+              <DemoBanner message="Dashboard figures are sample data until bookings, payroll, and margins are connected to live queries." />
               {/* Key Metrics */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow">

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { toastDemoAction } from "@/lib/persistence";
+import DemoBanner from "@/components/tebase/shared/DemoBanner";
 import { TeacherWithAWR, School } from "@/types/awr";
 import { AWRService } from "@/services/awrService";
 import { generateAWRNotificationEmail } from "@/services/emailTemplateService";
@@ -146,10 +148,10 @@ const AWRTracking = () => {
         setTeachers(updatedTeachers);
 
         // Show success message
-        toast({
-          title: "Notification Sent",
-          description: `AWR notification for ${selectedTeacher.name} has been sent to ${selectedSchool.name}`,
-        });
+        toastDemoAction(
+          "Notification queued",
+          "Email sending is not connected yet. Nothing was delivered."
+        );
 
         // Close modal
         handleCloseNotificationModal();
@@ -201,6 +203,7 @@ const AWRTracking = () => {
 
   return (
     <div className="space-y-6">
+      <DemoBanner message="AWR tracking and school notification emails are sample-only until a mail provider is connected." />
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">AWR Tracking</h1>
       </div>
