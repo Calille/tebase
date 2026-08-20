@@ -33,7 +33,7 @@ import { toast } from "@/components/ui/use-toast";
 import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { Loader2 } from "lucide-react";
-import { teacherService } from "@/services/teacherService";
+import { teacherService, TeacherFormSeed } from "@/services/teacherService";
 
 // Define the form schema with Zod
 const availabilitySchema = z.object({
@@ -74,8 +74,8 @@ type AvailabilityValues = z.infer<typeof availabilitySchema>;
 
 interface TeacherAvailabilityProps {
   teacherId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: TeacherFormSeed | null;
+  onSave?: (data: TeacherFormSeed) => void;
   readOnly?: boolean;
 }
 
@@ -97,14 +97,18 @@ const TeacherAvailability = ({
   // Helper function to convert availability schedule to form values
   const getInitialAvailability = () => {
     const schedule = initialData?.availabilitySchedule || {};
+    const day = (key: string): string[] => {
+      const value = schedule[key];
+      return Array.isArray(value) ? value.map(String) : [];
+    };
     return {
-      monday: schedule.monday || [],
-      tuesday: schedule.tuesday || [],
-      wednesday: schedule.wednesday || [],
-      thursday: schedule.thursday || [],
-      friday: schedule.friday || [],
-      saturday: schedule.saturday || [],
-      sunday: schedule.sunday || [],
+      monday: day("monday"),
+      tuesday: day("tuesday"),
+      wednesday: day("wednesday"),
+      thursday: day("thursday"),
+      friday: day("friday"),
+      saturday: day("saturday"),
+      sunday: day("sunday"),
     };
   };
 
@@ -116,9 +120,9 @@ const TeacherAvailability = ({
       ...getInitialAvailability(),
       preferredLocations: initialData?.preferredLocations?.join(", ") || "",
       maxTravelDistance: initialData?.maxTravelDistance || 10,
-      travelDistanceUnit: initialData?.travelDistanceUnit || "miles",
+      travelDistanceUnit: (initialData?.travelDistanceUnit as AvailabilityValues["travelDistanceUnit"]) || "miles",
       noticePeriod: initialData?.noticePeriod || 24,
-      noticePeriodUnit: initialData?.noticePeriodUnit || "hours",
+      noticePeriodUnit: (initialData?.noticePeriodUnit as AvailabilityValues["noticePeriodUnit"]) || "hours",
       availabilityNotes: initialData?.availabilityNotes || "",
     },
   });

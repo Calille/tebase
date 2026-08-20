@@ -476,7 +476,7 @@ const SchoolList = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleToggleFavorite(school.id, school.favorite);
+                          handleToggleFavorite(school.id, school.favorite ?? false);
                         }}
                         className="text-gray-400 hover:text-yellow-400 transition-colors"
                       >

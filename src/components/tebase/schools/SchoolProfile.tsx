@@ -69,9 +69,9 @@ const SchoolProfile: React.FC<SchoolProfileProps> = ({ schoolId, onBack, onSave 
     fetchSchoolData();
   }, [schoolId]);
 
-  const handleSectionSave = (section: string, data: Partial<School>) => {
-    setSchoolData((prev) => (prev ? { ...prev, [section]: data } : prev));
-    toastDemoAction(`${section} section saved`);
+  const handleSectionSave = (data: object) => {
+    setSchoolData((prev) => (prev ? { ...prev, ...data } : prev));
+    toastDemoAction("Section saved");
   };
 
   const handleSaveAll = async () => {
@@ -176,50 +176,50 @@ const SchoolProfile: React.FC<SchoolProfileProps> = ({ schoolId, onBack, onSave 
             <CardContent className="pt-6">
               <TabsContent value="basic-info">
                 <SchoolBasicInfo 
-                  initialData={schoolData} 
-                  onSave={(data) => handleSectionSave("basicInfo", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="primary-contact">
                 <SchoolPrimaryContact 
-                  initialData={schoolData?.primaryContact} 
-                  onSave={(data) => handleSectionSave("primaryContact", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="secondary-contact">
                 <SchoolSecondaryContact 
-                  initialData={schoolData?.secondaryContact} 
-                  onSave={(data) => handleSectionSave("secondaryContact", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="finance-contact">
                 <SchoolFinanceContact 
-                  initialData={schoolData?.financeContact} 
-                  onSave={(data) => handleSectionSave("financeContact", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="sendco-contact">
                 <SchoolSendcoContact 
-                  initialData={schoolData?.sendcoContact} 
-                  onSave={(data) => handleSectionSave("sendcoContact", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="headteacher-contact">
                 <SchoolHeadteacherContact 
-                  initialData={schoolData?.headteacherContact} 
-                  onSave={(data) => handleSectionSave("headteacherContact", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="additional-info">
                 <SchoolAdditionalInfo 
-                  initialData={schoolData} 
-                  onSave={(data) => handleSectionSave("additionalInfo", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               

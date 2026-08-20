@@ -41,7 +41,7 @@ import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { CalendarIcon, Loader2, Plus, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { teacherService } from "@/services/teacherService";
+import { teacherService, TeacherFormSeed } from "@/services/teacherService";
 
 // Define the form schema with Zod
 const additionalDetailsSchema = z.object({
@@ -82,8 +82,8 @@ type AdditionalDetailsValues = z.infer<typeof additionalDetailsSchema>;
 
 interface TeacherAdditionalDetailsProps {
   teacherId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: TeacherFormSeed | null;
+  onSave?: (data: TeacherFormSeed) => void;
   readOnly?: boolean;
 }
 
@@ -99,7 +99,7 @@ const TeacherAdditionalDetails = ({
   const form = useForm<AdditionalDetailsValues>({
     resolver: zodResolver(additionalDetailsSchema),
     defaultValues: {
-      backgroundCheckStatus: initialData?.backgroundCheckStatus || "pending",
+      backgroundCheckStatus: (initialData?.backgroundCheckStatus as AdditionalDetailsValues["backgroundCheckStatus"]) || "pending",
       backgroundCheckDate: initialData?.backgroundCheckDate ? new Date(initialData.backgroundCheckDate) : null,
       backgroundCheckReference: initialData?.backgroundCheckReference || "",
       

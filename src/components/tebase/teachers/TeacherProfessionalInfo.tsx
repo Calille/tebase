@@ -41,7 +41,7 @@ import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { CalendarIcon, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { teacherService } from "@/services/teacherService";
+import { teacherService, TeacherFormSeed } from "@/services/teacherService";
 
 // Define the form schema with Zod
 const professionalInfoSchema = z.object({
@@ -85,8 +85,8 @@ type ProfessionalInfoValues = z.infer<typeof professionalInfoSchema>;
 
 interface TeacherProfessionalInfoProps {
   teacherId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: TeacherFormSeed | null;
+  onSave?: (data: TeacherFormSeed) => void;
   readOnly?: boolean;
 }
 
@@ -109,13 +109,23 @@ const TeacherProfessionalInfo = ({
       education: initialData?.educationHistory || [
         { degree: "", institution: "", field: "", startYear: "", endYear: "", grade: "" },
       ],
-      certifications: initialData?.certifications?.map((cert: any) => ({
-        name: cert.name || "",
-        issuingAuthority: cert.issuingAuthority || "",
-        issueDate: cert.issueDate ? new Date(cert.issueDate) : undefined,
-        expiryDate: cert.expiryDate ? new Date(cert.expiryDate) : null,
-        certificateNumber: cert.certificateNumber || "",
-      })) || [],
+      certifications: (initialData?.certifications || []).map((cert) =>
+        typeof cert === "string"
+          ? {
+              name: cert,
+              issuingAuthority: "",
+              issueDate: undefined,
+              expiryDate: null,
+              certificateNumber: "",
+            }
+          : {
+              name: "",
+              issuingAuthority: "",
+              issueDate: undefined,
+              expiryDate: null,
+              certificateNumber: "",
+            }
+      ),
       subjects: initialData?.subjects?.join(", ") || "",
       gradeLevels: initialData?.gradeLevels || [],
       yearsOfExperience: initialData?.yearsOfExperience || 0,
@@ -432,7 +442,7 @@ const TeacherProfessionalInfo = ({
                         issueDate: undefined,
                         expiryDate: null,
                         certificateNumber: "",
-                      })
+                      } as unknown as ProfessionalInfoValues["certifications"][number])
                     }
                   >
                     <Plus className="mr-2 h-4 w-4" />

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { teacherService, Teacher } from "@/services/teacherService";
+import { teacherService, Teacher, TeacherFormSeed } from "@/services/teacherService";
 import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import DemoBanner from "@/components/tebase/shared/DemoBanner";
 
@@ -65,9 +65,9 @@ const TeacherProfile = ({
     fetchTeacher();
   }, [teacherId, isNewTeacher]);
 
-  const handleSectionSave = (section: string, data: Partial<Teacher>) => {
+  const handleSectionSave = (section: string, data: TeacherFormSeed) => {
     setTeacher((prevTeacher) =>
-      prevTeacher ? { ...prevTeacher, ...data } : (data as Teacher)
+      prevTeacher ? ({ ...prevTeacher, ...data } as Teacher) : (data as Teacher)
     );
 
     toastDemoAction(`${section} section saved`);
@@ -77,7 +77,7 @@ const TeacherProfile = ({
     }
   };
 
-  const handleCreateTeacher = async (personalData: Partial<Teacher>) => {
+  const handleCreateTeacher = async (personalData: TeacherFormSeed) => {
     try {
       setIsSaving(true);
 
@@ -97,7 +97,21 @@ const TeacherProfile = ({
         ...personalData,
         name,
         email,
-      });
+        address:
+          typeof personalData.address === "string"
+            ? personalData.address
+            : personalData.address
+              ? [
+                  personalData.address.street,
+                  personalData.address.city,
+                  personalData.address.state,
+                  personalData.address.zip,
+                  personalData.address.country,
+                ]
+                  .filter(Boolean)
+                  .join(", ")
+              : teacher?.address,
+      } as Parameters<typeof teacherService.createTeacher>[0]);
 
       toastWriteResult("Teacher created", result);
 

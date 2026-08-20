@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
+import type { Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
@@ -168,7 +169,7 @@ const TeacherOnboarding = () => {
   const nextStep = () => {
     const fieldsToValidate = getFieldsForStep(currentStep);
     
-    form.trigger(fieldsToValidate as any).then((isValid) => {
+    form.trigger(fieldsToValidate).then((isValid) => {
       if (isValid) {
         setCurrentStep(prev => Math.min(prev + 1, steps.length));
       }
@@ -181,7 +182,7 @@ const TeacherOnboarding = () => {
   };
   
   // Get the fields that should be validated for a specific step
-  const getFieldsForStep = (step: number) => {
+  const getFieldsForStep = (step: number): Path<TeacherFormValues>[] => {
     switch (step) {
       case 1:
         return ["name", "email", "phone", "address", "region"];

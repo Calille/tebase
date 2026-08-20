@@ -110,6 +110,43 @@ export interface Teacher {
 
 export type TeacherPatch = Partial<Teacher>;
 
+/** Teacher record plus form-only section fields used by the profile tabs. */
+export type TeacherFormSeed = Omit<Partial<Teacher>, "address"> & {
+  address?:
+    | string
+    | {
+        street?: string;
+        city?: string;
+        state?: string;
+        zip?: string;
+        country?: string;
+      };
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  secondaryPhone?: string;
+  resumeFileName?: string;
+  gradeLevels?: string[];
+  yearsOfExperience?: number;
+  hasResume?: boolean;
+  backgroundCheckStatus?: string;
+  backgroundCheckDate?: string;
+  backgroundCheckReference?: string;
+  references?: Array<Record<string, string>>;
+  specialSkills?: string;
+  accommodationRequired?: boolean;
+  accommodationDetails?: string;
+  adminNotes?: string;
+  maxTravelDistance?: number;
+  travelDistanceUnit?: string;
+  noticePeriod?: number;
+  noticePeriodUnit?: string;
+  availabilityNotes?: string;
+  paymentMethod?: string;
+  paypalEmail?: string;
+};
+
+
 const teachersStore: Teacher[] = [
   {
     id: "teacher-1",
@@ -233,8 +270,6 @@ export const teacherService = {
   ): Promise<CreateResult<Teacher>> {
     try {
       const newTeacher: Teacher = {
-        name: teacher.name,
-        email: teacher.email,
         phone: teacher.phone || "",
         subjects: teacher.subjects || [],
         status: teacher.status || "pending",
@@ -244,6 +279,8 @@ export const teacherService = {
         availability: teacher.availability || "part-time",
         ...teacher,
         id: `teacher-${Date.now()}`,
+        name: teacher.name,
+        email: teacher.email,
         documents: teacher.documents || [],
       };
 

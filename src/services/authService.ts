@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { errorMessage } from '@/lib/errors';
 
 export interface User {
   id: string;
@@ -93,8 +94,8 @@ export const authService = {
       };
       
       return { user, error: null };
-    } catch (error: any) {
-      return { user: null, error: error.message || 'An error occurred during sign in' };
+    } catch (error) {
+      return { user: null, error: errorMessage(error, 'An error occurred during sign in') };
     }
   },
   
@@ -153,8 +154,8 @@ export const authService = {
       };
       
       return { user, error: null };
-    } catch (error: any) {
-      return { user: null, error: error.message || 'An error occurred during sign up' };
+    } catch (error) {
+      return { user: null, error: errorMessage(error, 'An error occurred during sign up') };
     }
   },
   
@@ -167,8 +168,8 @@ export const authService = {
       }
       
       return { error: null };
-    } catch (error: any) {
-      return { error: error.message || 'An error occurred during sign out' };
+    } catch (error) {
+      return { error: errorMessage(error, 'An error occurred during sign out') };
     }
   },
   
@@ -214,8 +215,8 @@ export const authService = {
       const updatedUser = await this.getCurrentUser();
       
       return { user: updatedUser, error: null };
-    } catch (error: any) {
-      return { user: null, error: error.message || 'An error occurred updating profile' };
+    } catch (error) {
+      return { user: null, error: errorMessage(error, 'An error occurred updating profile') };
     }
   },
   
@@ -230,8 +231,8 @@ export const authService = {
       }
       
       return { error: null };
-    } catch (error: any) {
-      return { error: error.message || 'An error occurred sending reset password email' };
+    } catch (error) {
+      return { error: errorMessage(error, 'An error occurred sending reset password email') };
     }
   },
   
@@ -246,8 +247,8 @@ export const authService = {
       }
       
       return { error: null };
-    } catch (error: any) {
-      return { error: error.message || 'An error occurred updating password' };
+    } catch (error) {
+      return { error: errorMessage(error, 'An error occurred updating password') };
     }
   }
 }; 

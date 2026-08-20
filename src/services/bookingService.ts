@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from "@/lib/supabase";
+import { errorMessage } from "@/lib/errors";
 
 export interface Booking {
   id: string;
@@ -14,292 +15,166 @@ export interface Booking {
   subject: string;
   startDate: string;
   endDate: string;
-  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+  status: "confirmed" | "pending" | "completed" | "cancelled";
   duration: string;
   rate: number;
   notes?: string;
 }
 
+type BookingRow = {
+  id: string;
+  reference: string;
+  school: Booking["school"];
+  teacher: Booking["teacher"];
+  subject: string;
+  start_date: string;
+  end_date: string;
+  status: Booking["status"];
+  duration: string;
+  rate: number;
+  notes?: string;
+};
+
+type BookingUpdateRow = {
+  reference?: string;
+  school_id?: string;
+  teacher_id?: string;
+  subject?: string;
+  start_date?: string;
+  end_date?: string;
+  status?: Booking["status"];
+  duration?: string;
+  rate?: number;
+  notes?: string;
+};
+
+const BOOKING_SELECT = `
+  *,
+  school:school_id (id, name),
+  teacher:teacher_id (id, name)
+`;
+
+function mapBooking(item: BookingRow): Booking {
+  return {
+    id: item.id,
+    reference: item.reference,
+    school: item.school,
+    teacher: item.teacher,
+    subject: item.subject,
+    startDate: item.start_date,
+    endDate: item.end_date,
+    status: item.status,
+    duration: item.duration,
+    rate: item.rate,
+    notes: item.notes,
+  };
+}
+
+function throwIfError(error: { message: string } | null, fallback: string) {
+  if (error) {
+    throw new Error(error.message || fallback);
+  }
+}
+
 export const bookingService = {
   async getBookings(): Promise<Booking[]> {
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          school:school_id (id, name),
-          teacher:teacher_id (id, name)
-        `);
-      
-      if (error) {
-        console.error('Error fetching bookings:', error);
-        return [];
-      }
-      
-      // Transform the data to match our interface
-      const bookings = data?.map(item => ({
-        id: item.id,
-        reference: item.reference,
-        school: item.school,
-        teacher: item.teacher,
-        subject: item.subject,
-        startDate: item.start_date,
-        endDate: item.end_date,
-        status: item.status,
-        duration: item.duration,
-        rate: item.rate,
-        notes: item.notes
-      })) || [];
-      
-      return bookings;
-    } catch (error) {
-      console.error('Exception fetching bookings:', error);
-      return [];
-    }
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(BOOKING_SELECT);
+
+    throwIfError(error, "Failed to fetch bookings");
+    return (data as BookingRow[] | null)?.map(mapBooking) || [];
   },
 
   async getBookingById(id: string): Promise<Booking | null> {
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          school:school_id (id, name),
-          teacher:teacher_id (id, name)
-        `)
-        .eq('id', id)
-        .single();
-      
-      if (error) {
-        console.error(`Error fetching booking with ID ${id}:`, error);
-        return null;
-      }
-      
-      if (!data) return null;
-      
-      // Transform the data to match our interface
-      const booking: Booking = {
-        id: data.id,
-        reference: data.reference,
-        school: data.school,
-        teacher: data.teacher,
-        subject: data.subject,
-        startDate: data.start_date,
-        endDate: data.end_date,
-        status: data.status,
-        duration: data.duration,
-        rate: data.rate,
-        notes: data.notes
-      };
-      
-      return booking;
-    } catch (error) {
-      console.error(`Exception fetching booking with ID ${id}:`, error);
-      return null;
-    }
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(BOOKING_SELECT)
+      .eq("id", id)
+      .maybeSingle();
+
+    throwIfError(error, `Failed to fetch booking ${id}`);
+    return data ? mapBooking(data as BookingRow) : null;
   },
 
-  async createBooking(booking: Omit<Booking, 'id'>): Promise<Booking | null> {
-    try {
-      // Transform the data to match the database schema
-      const bookingData = {
-        reference: booking.reference,
-        school_id: booking.school.id,
-        teacher_id: booking.teacher.id,
-        subject: booking.subject,
-        start_date: booking.startDate,
-        end_date: booking.endDate,
-        status: booking.status,
-        duration: booking.duration,
-        rate: booking.rate,
-        notes: booking.notes
-      };
-      
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert([bookingData])
-        .select(`
-          *,
-          school:school_id (id, name),
-          teacher:teacher_id (id, name)
-        `);
-      
-      if (error) {
-        console.error('Error creating booking:', error);
-        return null;
-      }
-      
-      if (!data || data.length === 0) return null;
-      
-      // Transform the response to match our interface
-      const newBooking: Booking = {
-        id: data[0].id,
-        reference: data[0].reference,
-        school: data[0].school,
-        teacher: data[0].teacher,
-        subject: data[0].subject,
-        startDate: data[0].start_date,
-        endDate: data[0].end_date,
-        status: data[0].status,
-        duration: data[0].duration,
-        rate: data[0].rate,
-        notes: data[0].notes
-      };
-      
-      return newBooking;
-    } catch (error) {
-      console.error('Exception creating booking:', error);
-      return null;
+  async createBooking(booking: Omit<Booking, "id">): Promise<Booking> {
+    const bookingData = {
+      reference: booking.reference,
+      school_id: booking.school.id,
+      teacher_id: booking.teacher.id,
+      subject: booking.subject,
+      start_date: booking.startDate,
+      end_date: booking.endDate,
+      status: booking.status,
+      duration: booking.duration,
+      rate: booking.rate,
+      notes: booking.notes,
+    };
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .insert([bookingData])
+      .select(BOOKING_SELECT);
+
+    throwIfError(error, "Failed to create booking");
+    if (!data || data.length === 0) {
+      throw new Error("No booking returned after create");
     }
+    return mapBooking(data[0] as BookingRow);
   },
 
-  async updateBooking(id: string, updates: Partial<Booking>): Promise<Booking | null> {
-    try {
-      // Transform the updates to match the database schema
-      const updateData: any = {};
-      
-      if (updates.reference) updateData.reference = updates.reference;
-      if (updates.school) updateData.school_id = updates.school.id;
-      if (updates.teacher) updateData.teacher_id = updates.teacher.id;
-      if (updates.subject) updateData.subject = updates.subject;
-      if (updates.startDate) updateData.start_date = updates.startDate;
-      if (updates.endDate) updateData.end_date = updates.endDate;
-      if (updates.status) updateData.status = updates.status;
-      if (updates.duration) updateData.duration = updates.duration;
-      if (updates.rate !== undefined) updateData.rate = updates.rate;
-      if (updates.notes !== undefined) updateData.notes = updates.notes;
-      
-      const { data, error } = await supabase
-        .from('bookings')
-        .update(updateData)
-        .eq('id', id)
-        .select(`
-          *,
-          school:school_id (id, name),
-          teacher:teacher_id (id, name)
-        `);
-      
-      if (error) {
-        console.error(`Error updating booking with ID ${id}:`, error);
-        return null;
-      }
-      
-      if (!data || data.length === 0) return null;
-      
-      // Transform the response to match our interface
-      const updatedBooking: Booking = {
-        id: data[0].id,
-        reference: data[0].reference,
-        school: data[0].school,
-        teacher: data[0].teacher,
-        subject: data[0].subject,
-        startDate: data[0].start_date,
-        endDate: data[0].end_date,
-        status: data[0].status,
-        duration: data[0].duration,
-        rate: data[0].rate,
-        notes: data[0].notes
-      };
-      
-      return updatedBooking;
-    } catch (error) {
-      console.error(`Exception updating booking with ID ${id}:`, error);
-      return null;
+  async updateBooking(
+    id: string,
+    updates: Partial<Booking>
+  ): Promise<Booking> {
+    const updateData: BookingUpdateRow = {};
+
+    if (updates.reference) updateData.reference = updates.reference;
+    if (updates.school) updateData.school_id = updates.school.id;
+    if (updates.teacher) updateData.teacher_id = updates.teacher.id;
+    if (updates.subject) updateData.subject = updates.subject;
+    if (updates.startDate) updateData.start_date = updates.startDate;
+    if (updates.endDate) updateData.end_date = updates.endDate;
+    if (updates.status) updateData.status = updates.status;
+    if (updates.duration) updateData.duration = updates.duration;
+    if (updates.rate !== undefined) updateData.rate = updates.rate;
+    if (updates.notes !== undefined) updateData.notes = updates.notes;
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .update(updateData)
+      .eq("id", id)
+      .select(BOOKING_SELECT);
+
+    throwIfError(error, `Failed to update booking ${id}`);
+    if (!data || data.length === 0) {
+      throw new Error(`No booking returned after update ${id}`);
     }
+    return mapBooking(data[0] as BookingRow);
   },
 
-  async deleteBooking(id: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', id);
-      
-      if (error) {
-        console.error(`Error deleting booking with ID ${id}:`, error);
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(`Exception deleting booking with ID ${id}:`, error);
-      return false;
-    }
+  async deleteBooking(id: string): Promise<void> {
+    const { error } = await supabase.from("bookings").delete().eq("id", id);
+    throwIfError(error, `Failed to delete booking ${id}`);
   },
 
   async getBookingsBySchool(schoolId: string): Promise<Booking[]> {
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          school:school_id (id, name),
-          teacher:teacher_id (id, name)
-        `)
-        .eq('school_id', schoolId);
-      
-      if (error) {
-        console.error(`Error fetching bookings for school ${schoolId}:`, error);
-        return [];
-      }
-      
-      // Transform the data to match our interface
-      const bookings = data?.map(item => ({
-        id: item.id,
-        reference: item.reference,
-        school: item.school,
-        teacher: item.teacher,
-        subject: item.subject,
-        startDate: item.start_date,
-        endDate: item.end_date,
-        status: item.status,
-        duration: item.duration,
-        rate: item.rate,
-        notes: item.notes
-      })) || [];
-      
-      return bookings;
-    } catch (error) {
-      console.error(`Exception fetching bookings for school ${schoolId}:`, error);
-      return [];
-    }
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(BOOKING_SELECT)
+      .eq("school_id", schoolId);
+
+    throwIfError(error, `Failed to fetch bookings for school ${schoolId}`);
+    return (data as BookingRow[] | null)?.map(mapBooking) || [];
   },
 
   async getBookingsByTeacher(teacherId: string): Promise<Booking[]> {
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          school:school_id (id, name),
-          teacher:teacher_id (id, name)
-        `)
-        .eq('teacher_id', teacherId);
-      
-      if (error) {
-        console.error(`Error fetching bookings for teacher ${teacherId}:`, error);
-        return [];
-      }
-      
-      // Transform the data to match our interface
-      const bookings = data?.map(item => ({
-        id: item.id,
-        reference: item.reference,
-        school: item.school,
-        teacher: item.teacher,
-        subject: item.subject,
-        startDate: item.start_date,
-        endDate: item.end_date,
-        status: item.status,
-        duration: item.duration,
-        rate: item.rate,
-        notes: item.notes
-      })) || [];
-      
-      return bookings;
-    } catch (error) {
-      console.error(`Exception fetching bookings for teacher ${teacherId}:`, error);
-      return [];
-    }
-  }
-}; 
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(BOOKING_SELECT)
+      .eq("teacher_id", teacherId);
+
+    throwIfError(error, `Failed to fetch bookings for teacher ${teacherId}`);
+    return (data as BookingRow[] | null)?.map(mapBooking) || [];
+  },
+};

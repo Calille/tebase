@@ -71,6 +71,7 @@ import { format } from "date-fns";
 import { Booking, bookingService } from "@/services/bookingService";
 import DemoBanner from "@/components/tebase/shared/DemoBanner";
 import { toast } from "@/components/ui/use-toast";
+import { errorMessage } from "@/lib/errors";
 
 interface BookingListProps {
   bookings?: Booking[];
@@ -325,8 +326,8 @@ const BookingList = ({
           setUsingSampleData(true);
         }
       } catch (err) {
-        console.error("Failed to fetch bookings:", err);
-        setError("Failed to load bookings. Please try again later.");
+        setError(errorMessage(err, "Failed to load bookings. Please try again later."));
+        setUsingSampleData(true);
       } finally {
         setLoading(false);
       }
@@ -398,60 +399,50 @@ const BookingList = ({
   const handleAddBooking = async (bookingData: Omit<Booking, "id">) => {
     try {
       const createdBooking = await bookingService.createBooking(bookingData);
-      
-      if (createdBooking) {
-        setBookings([...bookings, createdBooking]);
-        setIsAddDialogOpen(false);
-        setUsingSampleData(false);
-        toast({
-          title: "Booking created",
-          description: "The booking has been saved.",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Could not save this booking to the database.",
-          variant: "destructive",
-        });
-      }
+      setBookings([...bookings, createdBooking]);
+      setIsAddDialogOpen(false);
+      setUsingSampleData(false);
+      toast({
+        title: "Booking created",
+        description: "The booking has been saved.",
+      });
     } catch (err) {
-      console.error("Failed to add booking:", err);
-      alert("Failed to add booking. Please try again.");
+      toast({
+        title: "Error",
+        description: errorMessage(err, "Failed to add booking. Please try again."),
+        variant: "destructive",
+      });
     }
   };
 
-  // Handle update booking status
-  const handleUpdateStatus = async (bookingId: string, status: Booking['status']) => {
+  const handleUpdateStatus = async (bookingId: string, status: Booking["status"]) => {
     try {
-      const updatedBooking = await bookingService.updateBooking(bookingId, { status });
-      
-      if (updatedBooking) {
-        setBookings(
-          bookings.map((booking) =>
-            booking.id === bookingId
-              ? { ...booking, status }
-              : booking
-          )
-        );
-      }
+      await bookingService.updateBooking(bookingId, { status });
+      setBookings(
+        bookings.map((booking) =>
+          booking.id === bookingId ? { ...booking, status } : booking
+        )
+      );
     } catch (err) {
-      console.error("Failed to update booking status:", err);
-      alert("Failed to update booking status. Please try again.");
+      toast({
+        title: "Error",
+        description: errorMessage(err, "Failed to update booking status."),
+        variant: "destructive",
+      });
     }
   };
 
-  // Handle delete booking
   const handleDeleteBooking = async (bookingId: string) => {
     if (window.confirm("Are you sure you want to delete this booking?")) {
       try {
-        const success = await bookingService.deleteBooking(bookingId);
-        
-        if (success) {
-          setBookings(bookings.filter((booking) => booking.id !== bookingId));
-        }
+        await bookingService.deleteBooking(bookingId);
+        setBookings(bookings.filter((booking) => booking.id !== bookingId));
       } catch (err) {
-        console.error("Failed to delete booking:", err);
-        alert("Failed to delete booking. Please try again.");
+        toast({
+          title: "Error",
+          description: errorMessage(err, "Failed to delete booking."),
+          variant: "destructive",
+        });
       }
     }
   };
@@ -492,6 +483,11 @@ const BookingList = ({
 
   return (
     <div className="space-y-4">
+    {error && (
+      <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        {error}
+      </div>
+    )}
     {usingSampleData && (
       <DemoBanner message="Showing sample bookings because none were returned from the database." />
     )}

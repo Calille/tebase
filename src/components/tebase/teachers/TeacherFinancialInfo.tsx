@@ -33,7 +33,7 @@ import { toast } from "@/components/ui/use-toast";
 import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { Loader2, Lock } from "lucide-react";
-import { teacherService } from "@/services/teacherService";
+import { teacherService, TeacherFormSeed } from "@/services/teacherService";
 
 // Define the form schema with Zod
 const financialInfoSchema = z.object({
@@ -66,8 +66,8 @@ type FinancialInfoValues = z.infer<typeof financialInfoSchema>;
 
 interface TeacherFinancialInfoProps {
   teacherId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: TeacherFormSeed | null;
+  onSave?: (data: TeacherFormSeed) => void;
   readOnly?: boolean;
 }
 
@@ -86,18 +86,18 @@ const TeacherFinancialInfo = ({
     defaultValues: {
       payRate: initialData?.salaryExpectations?.min || 0,
       currency: initialData?.salaryExpectations?.currency || "GBP",
-      rateType: initialData?.salaryExpectations?.rate || "daily",
+      rateType: (initialData?.salaryExpectations?.rate as FinancialInfoValues["rateType"]) || "daily",
       
       bankName: initialData?.bankDetails?.bankName || "",
       accountName: initialData?.bankDetails?.accountName || "",
       accountNumber: initialData?.bankDetails?.accountNumber || "",
       sortCode: initialData?.bankDetails?.sortCode || "",
       
-      taxId: initialData?.taxInformation?.taxId || "",
-      taxStatus: initialData?.taxInformation?.taxStatus || "",
-      taxWithholding: initialData?.taxInformation?.taxWithholding || "",
+      taxId: String(initialData?.taxInformation?.taxId ?? ""),
+      taxStatus: String(initialData?.taxInformation?.taxStatus ?? ""),
+      taxWithholding: String(initialData?.taxInformation?.taxWithholding ?? ""),
       
-      paymentMethod: initialData?.paymentMethod || "bank_transfer",
+      paymentMethod: (initialData?.paymentMethod as FinancialInfoValues["paymentMethod"]) || "bank_transfer",
       paypalEmail: initialData?.paypalEmail || "",
     },
   });

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, authService } from '@/services/authService';
 import { supabase } from '@/lib/supabase';
+import { errorMessage } from '@/lib/errors';
 
 interface AuthContextType {
   user: User | null;
@@ -82,8 +83,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setUser(authUser);
       return { error: null };
-    } catch (err: any) {
-      const message = err.message || 'An error occurred during sign in';
+    } catch (err) {
+      const message = errorMessage(err, 'An error occurred during sign in');
       setError(message);
       console.error('Sign in error:', err);
       return { error: message };
@@ -105,8 +106,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setUser(authUser);
       return { error: null };
-    } catch (err: any) {
-      const message = err.message || 'An error occurred during sign up';
+    } catch (err) {
+      const message = errorMessage(err, 'An error occurred during sign up');
       setError(message);
       console.error('Sign up error:', err);
       return { error: message };
@@ -128,8 +129,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setUser(null);
       return { error: null };
-    } catch (err: any) {
-      const message = err.message || 'An error occurred during sign out';
+    } catch (err) {
+      const message = errorMessage(err, 'An error occurred during sign out');
       setError(message);
       console.error('Sign out error:', err);
       return { error: message };
@@ -157,8 +158,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setUser(updatedUser);
       return { error: null };
-    } catch (err: any) {
-      const message = err.message || 'An error occurred updating profile';
+    } catch (err) {
+      const message = errorMessage(err, 'An error occurred updating profile');
       setError(message);
       console.error('Update profile error:', err);
       return { error: message };
@@ -178,8 +179,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error: authError };
       }
       return { error: null };
-    } catch (err: any) {
-      const message = err.message || 'An error occurred sending reset password email';
+    } catch (err) {
+      const message = errorMessage(err, 'An error occurred sending reset password email');
       setError(message);
       console.error('Reset password error:', err);
       return { error: message };
@@ -199,8 +200,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error: authError };
       }
       return { error: null };
-    } catch (err: any) {
-      const message = err.message || 'An error occurred updating password';
+    } catch (err) {
+      const message = errorMessage(err, 'An error occurred updating password');
       setError(message);
       console.error('Update password error:', err);
       return { error: message };
