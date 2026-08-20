@@ -44,14 +44,10 @@ const TestComponent = () => {
   );
 };
 
-// Lazy load teacher routes
-const NewTeacherPage = lazy(() => import('./routes/teachers/new.tsx'));
-const TeacherDetailPage = lazy(() => import('./routes/teachers/[id].tsx'));
-
-// Lazy load school routes
-const SchoolsListPage = lazy(() => import('./routes/schools/index.tsx'));
-const NewSchoolPage = lazy(() => import('./routes/schools/new.tsx'));
-const SchoolDetailPage = lazy(() => import('./routes/schools/[id].tsx'));
+const NewTeacherPage = lazy(() => import("./pages/NewTeacherPage"));
+const TeacherDetailPage = lazy(() => import("./pages/TeacherRecordPage"));
+const NewSchoolPage = lazy(() => import("./pages/NewSchoolPage"));
+const SchoolDetailPage = lazy(() => import("./pages/SchoolRecordPage"));
 
 function App() {
   return (
