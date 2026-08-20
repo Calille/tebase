@@ -1,5 +1,5 @@
 import path from "path";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
 import { tempo } from "tempo-devtools/dist/vite";
 
@@ -32,5 +32,9 @@ export default defineConfig({
     // @ts-ignore
     allowedHosts: true,
     port: 3000
-  }
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
+  },
 });

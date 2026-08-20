@@ -50,6 +50,10 @@ const TeacherDetailPage = lazy(() => import("./pages/TeacherRecordPage"));
 const NewSchoolPage = lazy(() => import("./pages/NewSchoolPage"));
 const SchoolDetailPage = lazy(() => import("./pages/SchoolRecordPage"));
 
+function TempoRoutes() {
+  return useRoutes(routes);
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -95,7 +99,7 @@ function App() {
             <Route path="/it-admin" element={<ProtectedRoute roles={ADMIN_ROLES}><ITAdminPage /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
+          {import.meta.env.VITE_TEMPO === "true" && <TempoRoutes />}
         </div>
       </Suspense>
     </AuthProvider>

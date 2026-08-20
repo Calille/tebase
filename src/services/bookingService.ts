@@ -1,5 +1,4 @@
 import { supabase } from "@/lib/supabase";
-import { errorMessage } from "@/lib/errors";
 
 export interface Booking {
   id: string;
