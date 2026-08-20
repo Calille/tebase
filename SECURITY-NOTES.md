@@ -62,3 +62,9 @@ admin-capable: the IT Administration nav item and `/it-admin` route.
 Signup still creates `role: 'user'`. Set the profile role in Supabase
 for staff who should see that screen. This is a product choice — add or
 remove roles in `src/lib/roles.ts` if the agency uses different names.
+
+## Vercel environment
+
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are baked in at build
+time. They must be set in the Vercel project. They are the anon key, not
+the service role. Never put the service role in a Vite env var.

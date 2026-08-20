@@ -7,7 +7,7 @@ import LoginPage from "./pages/LoginPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import HelpPage from "./pages/HelpPage";
-import TestPage from "./pages/TestPage";
+import MissingConfigPage from "./pages/MissingConfigPage";
 import TeachersPage from "./pages/TeachersPage";
 import SchoolsPage from "./pages/SchoolsPage";
 import BookingsPage from "./pages/BookingsPage";
@@ -28,6 +28,7 @@ import PayrollPage from "./pages/PayrollPage";
 import ITAdminPage from "./pages/ITAdminPage";
 import AWRTrackingPage from "./pages/AWRTrackingPage";
 import { ADMIN_ROLES } from "./lib/roles";
+import { isSupabaseConfigured } from "./lib/supabase";
 import routes from "tempo-routes";
 import React from "react";
 
@@ -49,12 +50,17 @@ const NewTeacherPage = lazy(() => import("./pages/NewTeacherPage"));
 const TeacherDetailPage = lazy(() => import("./pages/TeacherRecordPage"));
 const NewSchoolPage = lazy(() => import("./pages/NewSchoolPage"));
 const SchoolDetailPage = lazy(() => import("./pages/SchoolRecordPage"));
+const TestPage = lazy(() => import("./pages/TestPage"));
 
 function TempoRoutes() {
   return useRoutes(routes);
 }
 
 function App() {
+  if (!isSupabaseConfigured) {
+    return <MissingConfigPage />;
+  }
+
   return (
     <AuthProvider>
       <Suspense fallback={<p>Loading...</p>}>

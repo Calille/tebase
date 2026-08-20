@@ -57,6 +57,21 @@ npm run dev
 yarn dev
 ```
 
+## Deploy on Vercel
+
+This is a Vite SPA. `vercel.json` rewrites every path to `index.html` so React Router URLs such as `/teachers` work on refresh.
+
+1. Import the GitHub repo in Vercel (framework: Vite, output: `dist`, build: `npm run build`).
+2. Set these Environment Variables for **Production and Preview**:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. Leave `VITE_TEMPO` unset (or `false`) so Tempo is not shipped.
+4. In Supabase **Authentication → URL configuration**, add:
+   - Site URL: `https://<your-domain>`
+   - Redirect URLs: `https://<your-domain>/reset-password` and the matching Vercel preview URLs
+
+A Vercel build fails if the two `VITE_SUPABASE_*` variables are missing. A deploy that still has empty values shows a configuration screen instead of a blank page.
+
 ## Supabase Setup
 
 ### Database Schema
