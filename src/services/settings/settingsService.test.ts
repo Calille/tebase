@@ -21,4 +21,14 @@ describe("settingsService", () => {
     expect(result.persisted).toBe(false);
     expect(await settingsService.getMarginThresholds()).toEqual(next);
   });
+
+  it("round-trips timesheet overdue days", async () => {
+    expect(await settingsService.getTimesheetChaseSettings()).toEqual({
+      overdueAfterDays: 5,
+    });
+    await settingsService.saveTimesheetChaseSettings({ overdueAfterDays: 7 });
+    expect(await settingsService.getTimesheetChaseSettings()).toEqual({
+      overdueAfterDays: 7,
+    });
+  });
 });

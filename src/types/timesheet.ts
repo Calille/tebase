@@ -8,9 +8,6 @@ import type { PayrollCostModel } from "./payroll";
  *   draft → sent → viewed → approved
  *                 ↘ queried → resolved → approved
  * plus: overdue, void
- *
- * Expanded on the Timesheets page. Weekly Report only needs the
- * unapproved (not yet invoiceable) subset.
  */
 export type TimesheetStatus =
   | "draft"
@@ -37,6 +34,18 @@ export function isUnapprovedTimesheetStatus(
   return (UNAPPROVED_TIMESHEET_STATUSES as readonly string[]).includes(status);
 }
 
+/** Sent to the school, not yet approved, and not an open query. */
+export const OUTSTANDING_STATUSES: readonly TimesheetStatus[] = [
+  "sent",
+  "viewed",
+  "overdue",
+  "resolved",
+] as const;
+
+export function isOutstandingStatus(status: TimesheetStatus): boolean {
+  return (OUTSTANDING_STATUSES as readonly string[]).includes(status);
+}
+
 export type TimesheetQueryReason =
   | "wrong_hours"
   | "wrong_days"
@@ -44,6 +53,63 @@ export type TimesheetQueryReason =
   | "wrong_rate"
   | "assignment_changed"
   | "other";
+
+export const TIMESHEET_QUERY_REASON_LABELS: Record<TimesheetQueryReason, string> =
+  {
+    wrong_hours: "Wrong hours",
+    wrong_days: "Wrong days",
+    teacher_did_not_attend: "Teacher didn’t attend",
+    wrong_rate: "Wrong rate",
+    assignment_changed: "Assignment changed",
+    other: "Other",
+  };
+
+export type TimesheetAuthorRole = "school" | "consultant" | "system";
+
+export interface TimesheetTransition {
+  id: string;
+  from: TimesheetStatus | null;
+  to: TimesheetStatus;
+  at: string;
+  actor: PartyRef;
+  /** Required when `to` is approved — invoice evidence. */
+  approverName?: string;
+  note?: string;
+}
+
+export interface TimesheetMessage {
+  id: string;
+  author: PartyRef;
+  authorRole: TimesheetAuthorRole;
+  body: string;
+  at: string;
+}
+
+export type HoursAmendmentStatus = "pending" | "accepted" | "rejected";
+
+export interface HoursAmendment {
+  originalHours: number;
+  originalDays: number;
+  proposedHours: number;
+  proposedDays: number;
+  status: HoursAmendmentStatus;
+  decidedBy?: PartyRef;
+  decidedAt?: string;
+}
+
+export interface TimesheetQuery {
+  id: string;
+  reason: TimesheetQueryReason;
+  freeText: string;
+  openedAt: string;
+  openedBy: PartyRef;
+  resolvedAt?: string;
+  resolvedBy?: PartyRef;
+  resolutionNote?: string;
+  whatChanged?: string;
+  amendment?: HoursAmendment;
+  messages: TimesheetMessage[];
+}
 
 export interface Timesheet {
   id: string;
@@ -56,15 +122,26 @@ export interface Timesheet {
   /** Pre-filled from the booking before Friday is worked. */
   expectedHours: number;
   expectedDays: number;
-  /** School-confirmed (or proposed) hours. Null until the school responds. */
+  /** School-confirmed hours. Null until the school responds. */
   confirmedHours: number | null;
   confirmedDays: number | null;
   cost: PayrollCostModel;
   /**
-   * Charge value of the sheet. Uses confirmed hours when present,
-   * otherwise expected hours.
+   * Charge value. Uses confirmed days/hours when present, otherwise expected.
    */
   chargeValue: number;
+  sentAt: string | null;
+  viewedAt: string | null;
+  approvedAt: string | null;
+  approverName: string | null;
+  lastChasedAt: string | null;
+  chaseCount: number;
+  /** True when this school has a holiday or INSET covering the week. */
+  holidayOrInset: boolean;
+  holidayLabel?: string;
+  hasBookings: boolean;
+  query: TimesheetQuery | null;
+  history: TimesheetTransition[];
 }
 
 export interface UnapprovedTimesheetSummary {
@@ -72,4 +149,49 @@ export interface UnapprovedTimesheetSummary {
   count: number;
   chargeValue: number;
   timesheetIds: string[];
+}
+
+export type TimesheetBoardColumn = "outstanding" | "confirmed" | "queried";
+
+export interface TimesheetBoardSummary {
+  outstanding: { count: number; chargeValue: number };
+  confirmed: { count: number; chargeValue: number };
+  queried: { count: number; chargeValue: number };
+  /** Outstanding + queried — cannot invoice. */
+  cannotInvoice: { count: number; chargeValue: number };
+}
+
+export interface TimesheetFilters {
+  periodId: string;
+  schoolId?: string;
+  consultantId?: string;
+  teacherId?: string;
+  status?: TimesheetStatus | "unapproved" | "all";
+  search?: string;
+}
+
+export interface SlowSchool {
+  school: PartyRef;
+  outstandingCount: number;
+  averageDaysToApprove: number | null;
+  longestOutstandingDays: number;
+}
+
+export interface TimesheetEscalation {
+  longestOutstanding: Timesheet[];
+  slowSchools: SlowSchool[];
+}
+
+export function hoursDelta(sheet: Timesheet): number | null {
+  if (sheet.confirmedHours == null) return null;
+  return Math.round((sheet.confirmedHours - sheet.expectedHours) * 10) / 10;
+}
+
+export function boardColumnFor(
+  status: TimesheetStatus,
+): TimesheetBoardColumn | null {
+  if (status === "queried") return "queried";
+  if (status === "approved") return "confirmed";
+  if (isOutstandingStatus(status)) return "outstanding";
+  return null;
 }

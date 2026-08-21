@@ -4,30 +4,44 @@ import {
 } from "@/lib/persistence";
 import {
   DEFAULT_MARGIN_THRESHOLDS,
+  DEFAULT_TIMESHEET_CHASE_SETTINGS,
   type MarginThresholdSettings,
+  type TimesheetChaseSettings,
 } from "@/types/settings";
 
-const STORAGE_KEY = "tebase.settings.marginThresholds";
+const MARGIN_KEY = "tebase.settings.marginThresholds";
+const CHASE_KEY = "tebase.settings.timesheetChase";
 
-function readStored(): MarginThresholdSettings | null {
+function readJson<T>(key: string): T | null {
   if (typeof localStorage === "undefined") return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<MarginThresholdSettings>;
-    if (
-      typeof parsed.poundsPerDayFloor !== "number" ||
-      typeof parsed.percentFloor !== "number"
-    ) {
-      return null;
-    }
-    return {
-      poundsPerDayFloor: parsed.poundsPerDayFloor,
-      percentFloor: parsed.percentFloor,
-    };
+    return JSON.parse(raw) as T;
   } catch {
     return null;
   }
+}
+
+function readMargin(): MarginThresholdSettings | null {
+  const parsed = readJson<Partial<MarginThresholdSettings>>(MARGIN_KEY);
+  if (
+    !parsed ||
+    typeof parsed.poundsPerDayFloor !== "number" ||
+    typeof parsed.percentFloor !== "number"
+  ) {
+    return null;
+  }
+  return {
+    poundsPerDayFloor: parsed.poundsPerDayFloor,
+    percentFloor: parsed.percentFloor,
+  };
+}
+
+function readChase(): TimesheetChaseSettings | null {
+  const parsed = readJson<Partial<TimesheetChaseSettings>>(CHASE_KEY);
+  if (!parsed || typeof parsed.overdueAfterDays !== "number") return null;
+  return { overdueAfterDays: parsed.overdueAfterDays };
 }
 
 /**
@@ -36,22 +50,33 @@ function readStored(): MarginThresholdSettings | null {
  */
 export const settingsService = {
   async getMarginThresholds(): Promise<MarginThresholdSettings> {
-    return readStored() ?? { ...DEFAULT_MARGIN_THRESHOLDS };
+    return readMargin() ?? { ...DEFAULT_MARGIN_THRESHOLDS };
   },
 
   async saveMarginThresholds(
     next: MarginThresholdSettings,
   ): Promise<WriteResult> {
-    if (typeof localStorage === "undefined") {
-      return demoWriteResult();
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    if (typeof localStorage === "undefined") return demoWriteResult();
+    localStorage.setItem(MARGIN_KEY, JSON.stringify(next));
+    return demoWriteResult();
+  },
+
+  async getTimesheetChaseSettings(): Promise<TimesheetChaseSettings> {
+    return readChase() ?? { ...DEFAULT_TIMESHEET_CHASE_SETTINGS };
+  },
+
+  async saveTimesheetChaseSettings(
+    next: TimesheetChaseSettings,
+  ): Promise<WriteResult> {
+    if (typeof localStorage === "undefined") return demoWriteResult();
+    localStorage.setItem(CHASE_KEY, JSON.stringify(next));
     return demoWriteResult();
   },
 };
 
 export function resetSettingsStoreForTests() {
   if (typeof localStorage !== "undefined") {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(MARGIN_KEY);
+    localStorage.removeItem(CHASE_KEY);
   }
 }

@@ -16,7 +16,9 @@ import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { settingsService } from "@/services/settings/settingsService";
 import {
   DEFAULT_MARGIN_THRESHOLDS,
+  DEFAULT_TIMESHEET_CHASE_SETTINGS,
   type MarginThresholdSettings,
+  type TimesheetChaseSettings,
 } from "@/types/settings";
 
 const Settings = () => {
@@ -34,6 +36,10 @@ const Settings = () => {
     DEFAULT_MARGIN_THRESHOLDS,
   );
   const [savingFloors, setSavingFloors] = useState(false);
+  const [chaseSettings, setChaseSettings] = useState<TimesheetChaseSettings>(
+    DEFAULT_TIMESHEET_CHASE_SETTINGS,
+  );
+  const [savingChase, setSavingChase] = useState(false);
 
   // Define available themes
   const colorThemes = [
@@ -77,6 +83,7 @@ const Settings = () => {
     }
 
     settingsService.getMarginThresholds().then(setMarginFloors);
+    settingsService.getTimesheetChaseSettings().then(setChaseSettings);
   }, [user]);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -137,6 +144,16 @@ const Settings = () => {
       toastWriteResult("Margin thresholds saved", result);
     } finally {
       setSavingFloors(false);
+    }
+  };
+
+  const handleSaveChaseSettings = async () => {
+    setSavingChase(true);
+    try {
+      const result = await settingsService.saveTimesheetChaseSettings(chaseSettings);
+      toastWriteResult("Timesheet chase settings saved", result);
+    } finally {
+      setSavingChase(false);
     }
   };
 
@@ -672,6 +689,36 @@ const Settings = () => {
               </div>
               <Button onClick={handleSaveMarginFloors} disabled={savingFloors}>
                 {savingFloors ? "Saving…" : "Save thresholds"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Timesheet chasing</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Flag an outstanding sheet as overdue after this many days. Starter
+                value — not policy.
+              </p>
+              <div className="space-y-2 max-w-xs">
+                <Label htmlFor="overdue-days">Overdue after (days)</Label>
+                <Input
+                  id="overdue-days"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={chaseSettings.overdueAfterDays}
+                  onChange={(event) =>
+                    setChaseSettings({
+                      overdueAfterDays: Number(event.target.value),
+                    })
+                  }
+                />
+              </div>
+              <Button onClick={handleSaveChaseSettings} disabled={savingChase}>
+                {savingChase ? "Saving…" : "Save chase settings"}
               </Button>
             </CardContent>
           </Card>
