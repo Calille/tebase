@@ -89,5 +89,23 @@ export const CONSULTANT_FIXTURES: { id: string; name: string; teamId: string }[]
 
 export const LEADERSHIP = {
   teamLead: { id: "cons-tl", name: "Maya Hernández" },
+  southLead: { id: "cons-tl-south", name: "Ruth Cartwright" },
   director: { id: "cons-dir", name: "Chris Adey" },
 } as const;
+
+export const COORDINATOR_FIXTURES: { id: string; name: string; teamId: string }[] = [
+  { id: "cons-coord-01", name: "Helen Davies", teamId: "team-north" },
+  { id: "cons-coord-02", name: "Callum Hughes", teamId: "team-north" },
+  { id: "cons-coord-03", name: "Sian Bennett", teamId: "team-north" },
+  { id: "cons-coord-04", name: "Neil Williams", teamId: "team-north" },
+  { id: "cons-coord-05", name: "Joanna Chen", teamId: "team-north" },
+  { id: "cons-coord-06", name: "Rhys Santos", teamId: "team-north" },
+  { id: "cons-coord-07", name: "Lucy Kowalski", teamId: "team-north" },
+  { id: "cons-coord-08", name: "Patrice Fernandes", teamId: "team-south" },
+  { id: "cons-coord-09", name: "Megan Iqbal", teamId: "team-south" },
+  { id: "cons-coord-10", name: "Ben Osei", teamId: "team-south" },
+  { id: "cons-coord-11", name: "Claire Kaur", teamId: "team-south" },
+  { id: "cons-coord-12", name: "Yasmin Nowak", teamId: "team-south" },
+  { id: "cons-coord-13", name: "Tariq Haddad", teamId: "team-south" },
+  { id: "cons-coord-14", name: "Chioma Martins", teamId: "team-south" },
+];

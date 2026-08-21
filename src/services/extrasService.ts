@@ -80,18 +80,29 @@ export interface ItSystemLog {
   status: "success" | "error";
 }
 
+export interface TeamMemberRow {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+  bookingsThisWeek: number;
+  daysThisWeek: number;
+}
+
 export interface TeamLeaderCard {
   id: string;
   name: string;
   role: string;
   email: string;
   phone: string;
-  avatar: string;
   department: string;
   teamSize: number;
+  bookingsThisWeek: number;
+  daysThisWeek: number;
   performance: number;
   status: "active" | "on leave" | "training";
-  memberNames: string[];
+  members: TeamMemberRow[];
 }
 
 export interface OpsSnapshot {
@@ -117,8 +128,16 @@ function avatarFor(seed: string): string {
 function roleLabel(consultant: SeedConsultant): string {
   if (consultant.role === "director") return "Director";
   if (consultant.role === "team_leader") return "Team Leader";
+  if (consultant.role === "coordinator") return "Desk Coordinator";
   return "Consultant";
 }
+
+const TEAM_ROLE_RANK: Record<SeedConsultant["role"], number> = {
+  team_leader: 0,
+  consultant: 1,
+  coordinator: 2,
+  director: 3,
+};
 
 function gbpDate(iso: string): string {
   return iso.slice(0, 10);
@@ -426,35 +445,58 @@ export const extrasService = {
   },
   async getTeamLeaders(): Promise<TeamLeaderCard[]> {
     const dataset = getDataset();
-    const leader =
-      dataset.consultants.find((item) => item.role === "team_leader") ?? dataset.consultants[0]!;
+    const week = dataset.weeks[0];
+
+    const weekActivity = (consultantId: string) => {
+      if (!week) return { bookingsThisWeek: 0, daysThisWeek: 0 };
+      let bookingsThisWeek = 0;
+      let daysThisWeek = 0;
+      for (const booking of dataset.bookings) {
+        if (booking.consultantId !== consultantId) continue;
+        const days = booking.days.filter(
+          (day) => !day.cancelled && day.date >= week.startsOn && day.date <= week.weekEnding,
+        );
+        if (days.length === 0) continue;
+        bookingsThisWeek += 1;
+        daysThisWeek += days.reduce((sum, day) => sum + day.units, 0);
+      }
+      return { bookingsThisWeek, daysThisWeek };
+    };
+
     return dataset.teams.map((team) => {
-      const members = dataset.consultants.filter(
-        (item) => item.teamId === team.id && item.role === "consultant",
-      );
-      const weekBookings = dataset.bookings.filter(
-        (booking) =>
-          members.some((member) => member.id === booking.consultantId) &&
-          dataset.weeks[0] &&
-          booking.days.some(
-            (day) =>
-              !day.cancelled &&
-              day.date >= dataset.weeks[0]!.startsOn &&
-              day.date <= dataset.weeks[0]!.weekEnding,
-          ),
-      ).length;
+      const leader =
+        dataset.consultants.find((item) => item.id === team.leaderId) ??
+        dataset.consultants.find((item) => item.role === "team_leader") ??
+        dataset.consultants[0]!;
+      const members = dataset.consultants
+        .filter((item) => item.teamId === team.id && item.role !== "director")
+        .sort(
+          (a, b) =>
+            TEAM_ROLE_RANK[a.role] - TEAM_ROLE_RANK[b.role] || a.name.localeCompare(b.name),
+        );
+      const memberRows: TeamMemberRow[] = members.map((member) => ({
+        id: member.id,
+        name: member.name,
+        role: roleLabel(member),
+        email: member.email,
+        phone: member.phone,
+        ...weekActivity(member.id),
+      }));
+      const bookingsThisWeek = memberRows.reduce((sum, member) => sum + member.bookingsThisWeek, 0);
+      const daysThisWeek = memberRows.reduce((sum, member) => sum + member.daysThisWeek, 0);
       return {
         id: team.id,
         name: leader.name,
-        role: "Team Leader",
+        role: roleLabel(leader),
         email: leader.email,
-        phone: "07700 900321",
-        avatar: avatarFor(leader.id),
+        phone: leader.phone,
         department: team.name,
         teamSize: members.length,
-        performance: Math.min(99, 78 + weekBookings),
+        bookingsThisWeek,
+        daysThisWeek,
+        performance: Math.min(99, 78 + bookingsThisWeek),
         status: "active" as const,
-        memberNames: members.map((member) => member.name),
+        members: memberRows,
       };
     });
   },

@@ -32,8 +32,9 @@ export interface SeedConsultant {
   id: string;
   name: string;
   email: string;
+  phone: string;
   teamId: string;
-  role: "consultant" | "team_leader" | "director";
+  role: "consultant" | "team_leader" | "director" | "coordinator";
 }
 
 export interface SeedTeacher {

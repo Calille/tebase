@@ -17,6 +17,9 @@ describe("seed dataset", () => {
 
   it("hits the volume band and named edge cases", () => {
     expect(dataset.consultants.filter((c) => c.role === "consultant")).toHaveLength(8);
+    expect(dataset.consultants.filter((c) => c.role === "coordinator")).toHaveLength(14);
+    expect(dataset.consultants.filter((c) => c.role === "team_leader")).toHaveLength(2);
+    expect(new Set(dataset.teams.map((team) => team.leaderId)).size).toBe(2);
     expect(dataset.teachers).toHaveLength(50);
     expect(dataset.schools).toHaveLength(30);
     expect(dataset.bookings.length).toBeGreaterThanOrEqual(700);

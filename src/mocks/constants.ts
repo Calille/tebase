@@ -2,6 +2,7 @@ export const DEFAULT_SEED = 20260821;
 
 export const VOLUME = {
   consultantCount: 8,
+  coordinatorCount: 14,
   teamCount: 2,
   teacherCount: 50,
   schoolCount: 30,
@@ -51,6 +52,7 @@ export const IDS = {
     amara: "cons-amara",
     idle: "cons-idle",
     teamLead: "cons-tl",
+    teamLeadSouth: "cons-tl-south",
     director: "cons-dir",
   },
   teams: {

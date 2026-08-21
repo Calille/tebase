@@ -1,5 +1,11 @@
 import { IDS, VOLUME } from "../constants";
-import { CONSULTANT_FIXTURES, FIRST_NAMES, LEADERSHIP, SURNAMES } from "../data/names";
+import {
+  CONSULTANT_FIXTURES,
+  COORDINATOR_FIXTURES,
+  FIRST_NAMES,
+  LEADERSHIP,
+  SURNAMES,
+} from "../data/names";
 import { POSTCODES } from "../data/postcodes";
 import { RATE_BANDS, STAFF_ROLES, type StaffRole } from "../data/roles";
 import { PHASES, PRIMARY_KEY_STAGES, SECONDARY_SUBJECTS, type Phase } from "../data/subjects";
@@ -55,25 +61,41 @@ export function generateOrgPeople(rng: Rng): {
 } {
   const teams: SeedTeam[] = [
     { id: IDS.teams.north, name: "North desk", leaderId: IDS.consultants.teamLead },
-    { id: IDS.teams.south, name: "South desk", leaderId: IDS.consultants.teamLead },
+    { id: IDS.teams.south, name: "South desk", leaderId: IDS.consultants.teamLeadSouth },
   ];
 
-  const consultants: SeedConsultant[] = CONSULTANT_FIXTURES.map((item) => ({
-    id: item.id,
-    name: item.name,
-    email: `${slug(item.name)}@keep-supply.example`,
-    teamId: item.teamId,
-    role: "consultant",
-  }));
+  const people: SeedConsultant[] = [];
+  const pushPerson = (
+    item: Omit<SeedConsultant, "phone">,
+  ) => {
+    people.push({ ...item, phone: fakeMobile(200 + people.length) });
+  };
 
-  consultants.push({
+  CONSULTANT_FIXTURES.forEach((item) =>
+    pushPerson({
+      id: item.id,
+      name: item.name,
+      email: `${slug(item.name)}@keep-supply.example`,
+      teamId: item.teamId,
+      role: "consultant",
+    }),
+  );
+
+  pushPerson({
     id: LEADERSHIP.teamLead.id,
     name: LEADERSHIP.teamLead.name,
     email: "maya.hernandez@keep-supply.example",
     teamId: IDS.teams.north,
     role: "team_leader",
   });
-  consultants.push({
+  pushPerson({
+    id: LEADERSHIP.southLead.id,
+    name: LEADERSHIP.southLead.name,
+    email: `${slug(LEADERSHIP.southLead.name)}@keep-supply.example`,
+    teamId: IDS.teams.south,
+    role: "team_leader",
+  });
+  pushPerson({
     id: LEADERSHIP.director.id,
     name: LEADERSHIP.director.name,
     email: "chris.adey@keep-supply.example",
@@ -81,7 +103,17 @@ export function generateOrgPeople(rng: Rng): {
     role: "director",
   });
 
-  return { teams, consultants };
+  COORDINATOR_FIXTURES.slice(0, VOLUME.coordinatorCount).forEach((item) =>
+    pushPerson({
+      id: item.id,
+      name: item.name,
+      email: `${slug(item.name)}@keep-supply.example`,
+      teamId: item.teamId,
+      role: "coordinator",
+    }),
+  );
+
+  return { teams, consultants: people };
 }
 
 const FIXTURE_TEACHERS: Array<{
