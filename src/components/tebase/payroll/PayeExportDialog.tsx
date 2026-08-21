@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import { format, parseISO } from "date-fns";
-import { enGB } from "date-fns/locale";
 import { AlertTriangle, Download } from "lucide-react";
-import { downloadCsv } from "@/lib/downloadCsv";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,16 +18,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { downloadCsv } from "@/lib/downloadCsv";
 import { toastWriteResult } from "@/lib/persistence";
 import { formatWeekEnding } from "@/lib/payWeek";
 import { payrollService } from "@/services/payroll/payrollService";
-import type { MainpayExportPreview } from "@/services/payroll/payrollService";
-import { MAINPAY_COLUMN_MAP } from "@/services/payroll/mainpayFormat";
+import type { PayeExportPreview } from "@/services/payroll/payrollService";
+import { PAYE_COLUMN_MAP } from "@/services/payroll/payeFormat";
 import type { PayrollPartyRef } from "@/types/payroll";
 
 const PREVIEW_ROWS = 5;
 
-interface MainpayExportDialogProps {
+interface PayeExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   periodId: string;
@@ -38,14 +36,14 @@ interface MainpayExportDialogProps {
   onExported: () => void;
 }
 
-const MainpayExportDialog = ({
+const PayeExportDialog = ({
   open,
   onOpenChange,
   periodId,
   exportedBy,
   onExported,
-}: MainpayExportDialogProps) => {
-  const [preview, setPreview] = useState<MainpayExportPreview | null>(null);
+}: PayeExportDialogProps) => {
+  const [preview, setPreview] = useState<PayeExportPreview | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -59,7 +57,7 @@ const MainpayExportDialog = ({
     setPreview(null);
 
     payrollService
-      .previewMainpayExport(periodId)
+      .previewPayeExport(periodId)
       .then((data) => {
         if (!cancelled) setPreview(data);
       })
@@ -68,7 +66,7 @@ const MainpayExportDialog = ({
           setError(
             err instanceof Error
               ? err.message
-              : "Could not build the Mainpay preview.",
+              : "Could not build the PAYE preview.",
           );
         }
       })
@@ -83,7 +81,7 @@ const MainpayExportDialog = ({
 
   const issues = preview?.issues ?? [];
   const canDownload = Boolean(
-    preview && issues.length === 0 && preview.umbrellaCount > 0 && exportedBy,
+    preview && issues.length === 0 && preview.payeCount > 0 && exportedBy,
   );
   const previewRows = preview?.rows.slice(0, PREVIEW_ROWS) ?? [];
 
@@ -91,13 +89,13 @@ const MainpayExportDialog = ({
     if (!preview || !exportedBy || !canDownload) return;
     setDownloading(true);
     try {
-      downloadCsv(`mainpay-week-ending-${preview.weekEnding}.csv`, preview.csv);
-      const result = await payrollService.recordMainpayExport({
+      downloadCsv(`paye-week-ending-${preview.weekEnding}.csv`, preview.csv);
+      const result = await payrollService.recordPayeExport({
         periodId: preview.periodId,
-        rowCount: preview.umbrellaCount,
+        rowCount: preview.payeCount,
         exportedBy,
       });
-      toastWriteResult("Mainpay export recorded", result);
+      toastWriteResult("PAYE export recorded", result);
       onExported();
       onOpenChange(false);
     } finally {
@@ -109,13 +107,13 @@ const MainpayExportDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Export for Mainpay</DialogTitle>
+          <DialogTitle>Export to PAYE</DialogTitle>
           <DialogDescription>
-            Umbrella workers for week ending{" "}
+            PAYE workers for week ending{" "}
             {preview ? formatWeekEnding(preview.weekEnding) : "…"}. Column
-            headers are placeholders until Mainpay’s spec is confirmed — see{" "}
-            <code className="text-xs">src/services/payroll/mainpayFormat.ts</code>
-            .
+            headers are placeholders until the bureau file spec is confirmed —
+            see{" "}
+            <code className="text-xs">src/services/payroll/payeFormat.ts</code>.
           </DialogDescription>
         </DialogHeader>
 
@@ -143,17 +141,19 @@ const MainpayExportDialog = ({
                   </ul>
                 </AlertDescription>
               </Alert>
-            ) : preview.umbrellaCount === 0 ? (
+            ) : preview.payeCount === 0 ? (
               <Alert>
                 <AlertDescription>
-                  No umbrella workers in this week — nothing to send to Mainpay.
+                  No PAYE workers in this week — nothing to send to payroll.
                 </AlertDescription>
               </Alert>
             ) : (
               <p className="text-sm text-gray-600">
-                {preview.umbrellaCount} umbrella row
-                {preview.umbrellaCount === 1 ? "" : "s"} ready. This file is the
-                full umbrella group for the week, not the filtered table view.
+                {preview.payeCount} PAYE row
+                {preview.payeCount === 1 ? "" : "s"} ready. This file is the
+                full PAYE group for the week, not the filtered table view.
+                Employer NI, holiday accrual and pension are included as
+                modelled on-costs.
               </p>
             )}
 
@@ -166,7 +166,7 @@ const MainpayExportDialog = ({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        {MAINPAY_COLUMN_MAP.map((column) => (
+                        {PAYE_COLUMN_MAP.map((column) => (
                           <TableHead
                             key={column.key}
                             className="whitespace-nowrap text-xs"
@@ -179,7 +179,7 @@ const MainpayExportDialog = ({
                     <TableBody>
                       {previewRows.map((row, index) => (
                         <TableRow key={`${row.payrollNumber}-${index}`}>
-                          {MAINPAY_COLUMN_MAP.map((column) => (
+                          {PAYE_COLUMN_MAP.map((column) => (
                             <TableCell
                               key={column.key}
                               className="whitespace-nowrap text-xs"
@@ -211,10 +211,4 @@ const MainpayExportDialog = ({
   );
 };
 
-export default MainpayExportDialog;
-
-export function formatExportStamp(exportedAt: string): string {
-  return format(parseISO(exportedAt), "d MMM yyyy 'at' HH:mm", {
-    locale: enGB,
-  });
-}
+export default PayeExportDialog;

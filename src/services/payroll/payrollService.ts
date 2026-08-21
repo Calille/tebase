@@ -8,6 +8,8 @@ import {
   summariseGroup,
   type MainpayExportRecord,
   type MainpayValidationIssue,
+  type PayeExportRecord,
+  type PayePayrollLine,
   type PayWeek,
   type PayrollFilters,
   type PayrollPartyRef,
@@ -23,13 +25,30 @@ import {
   validateMainpayLines,
   type MainpayCsvRow,
 } from "./mainpayFormat";
+import {
+  generatePayeCsv,
+  isPayeLine,
+  PAYE_COLUMN_MAP,
+  toPayeRow,
+  validatePayeLines,
+  type PayeCsvRow,
+} from "./payeFormat";
+import {
+  classifyMainpayConnection,
+  DISCONNECTED_MAINPAY,
+  type MainpayConnectionHealth,
+} from "@/lib/mainpayConnection";
 import { getDataset, resetDataset } from "@/mocks";
 
 const EXPORT_STORAGE_KEY = "tebase.payroll.mainpayExports";
+const PAYE_EXPORT_STORAGE_KEY = "tebase.payroll.payeExports";
+const MAINPAY_CONNECTION_KEY = "tebase.payroll.mainpayConnection";
 
 let linesByPeriod = new Map<string, PayrollWorkerLine[]>();
 let weeks: PayWeek[] = [];
 let exportsStore: MainpayExportRecord[] = [];
+let payeExportsStore: PayeExportRecord[] = [];
+let mainpayConnectedAt: string | null = null;
 let seeded = false;
 
 function uniqueById(items: PayrollPartyRef[]): PayrollPartyRef[] {
@@ -58,6 +77,39 @@ function readStoredExports(): MainpayExportRecord[] {
 function writeStoredExports(records: MainpayExportRecord[]) {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(EXPORT_STORAGE_KEY, JSON.stringify(records));
+}
+
+function readStoredPayeExports(): PayeExportRecord[] {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(PAYE_EXPORT_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as PayeExportRecord[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredPayeExports(records: PayeExportRecord[]) {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem(PAYE_EXPORT_STORAGE_KEY, JSON.stringify(records));
+}
+
+function readMainpayConnectedAt(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(MAINPAY_CONNECTION_KEY);
+    return raw && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeMainpayConnectedAt(value: string | null) {
+  if (typeof localStorage === "undefined") return;
+  if (value) localStorage.setItem(MAINPAY_CONNECTION_KEY, value);
+  else localStorage.removeItem(MAINPAY_CONNECTION_KEY);
 }
 
 function seedIfNeeded(now = new Date()) {
@@ -94,6 +146,15 @@ function seedIfNeeded(now = new Date()) {
       writeStoredExports(exportsStore);
     }
   }
+
+  const storedPaye = readStoredPayeExports();
+  if (storedPaye.length > 0) {
+    payeExportsStore = storedPaye;
+  } else {
+    payeExportsStore = [];
+  }
+
+  mainpayConnectedAt = readMainpayConnectedAt();
 
   seeded = true;
 }
@@ -170,6 +231,16 @@ export interface MainpayExportPreview {
   csv: string;
   issues: MainpayValidationIssue[];
   umbrellaCount: number;
+}
+
+export interface PayeExportPreview {
+  weekEnding: string;
+  periodId: string;
+  headers: string[];
+  rows: PayeCsvRow[];
+  csv: string;
+  issues: MainpayValidationIssue[];
+  payeCount: number;
 }
 
 /**
@@ -268,6 +339,75 @@ export const payrollService = {
     writeStoredExports(exportsStore);
     return demoCreateResult(record);
   },
+
+  async getPayeExports(periodId: string): Promise<PayeExportRecord[]> {
+    seedIfNeeded();
+    return payeExportsStore
+      .filter((record) => record.periodId === periodId)
+      .sort((a, b) => b.exportedAt.localeCompare(a.exportedAt));
+  },
+
+  async previewPayeExport(periodId: string): Promise<PayeExportPreview> {
+    seedIfNeeded();
+    const period = weeks.find((week) => week.id === periodId);
+    const weekEnding = period?.weekEnding ?? periodId;
+    const paye = getLines(periodId).filter(isPayeLine);
+    const rows = paye.map((line) => toPayeRow(line, weekEnding));
+    return {
+      weekEnding,
+      periodId,
+      headers: PAYE_COLUMN_MAP.map((column) => column.header),
+      rows,
+      csv: generatePayeCsv(rows),
+      issues: validatePayeLines(paye),
+      payeCount: paye.length,
+    };
+  },
+
+  async recordPayeExport(input: {
+    periodId: string;
+    rowCount: number;
+    exportedBy: PayrollPartyRef;
+  }): Promise<CreateResult<PayeExportRecord>> {
+    seedIfNeeded();
+    const period = weeks.find((week) => week.id === input.periodId);
+    const record: PayeExportRecord = {
+      id: `paye-exp-${input.periodId}-${Date.now()}`,
+      exportedAt: new Date().toISOString(),
+      periodId: input.periodId,
+      weekEnding: period?.weekEnding ?? input.periodId,
+      rowCount: input.rowCount,
+      exportedBy: input.exportedBy,
+    };
+    payeExportsStore = [record, ...payeExportsStore];
+    writeStoredPayeExports(payeExportsStore);
+    return demoCreateResult(record);
+  },
+
+  async getMainpayConnectionHealth(): Promise<MainpayConnectionHealth> {
+    seedIfNeeded();
+    return classifyMainpayConnection({ sessionConnectedAt: mainpayConnectedAt });
+  },
+
+  /**
+   * Live Mainpay API is not configured. This records a demo session flag only
+   * so the UI can show Connected — nothing is sent to Mainpay.
+   */
+  async connectMainpayApi(): Promise<CreateResult<MainpayConnectionHealth>> {
+    seedIfNeeded();
+    mainpayConnectedAt = new Date().toISOString();
+    writeMainpayConnectedAt(mainpayConnectedAt);
+    return demoCreateResult(
+      classifyMainpayConnection({ sessionConnectedAt: mainpayConnectedAt }),
+    );
+  },
+
+  async disconnectMainpayApi(): Promise<CreateResult<MainpayConnectionHealth>> {
+    seedIfNeeded();
+    mainpayConnectedAt = null;
+    writeMainpayConnectedAt(null);
+    return demoCreateResult({ ...DISCONNECTED_MAINPAY });
+  },
 };
 
 /** Test-only: rebuild mock weeks/lines and clear recorded exports. */
@@ -277,8 +417,12 @@ export function resetPayrollStoreForTests(now = new Date()) {
   linesByPeriod = new Map();
   weeks = [];
   exportsStore = [];
+  payeExportsStore = [];
+  mainpayConnectedAt = null;
   if (typeof localStorage !== "undefined") {
     localStorage.removeItem(EXPORT_STORAGE_KEY);
+    localStorage.removeItem(PAYE_EXPORT_STORAGE_KEY);
+    localStorage.removeItem(MAINPAY_CONNECTION_KEY);
   }
   seedIfNeeded(now);
 }
@@ -287,4 +431,8 @@ export function getUmbrellaLinesForTests(
   periodId: string,
 ): UmbrellaPayrollLine[] {
   return getLines(periodId).filter(isUmbrellaLine);
+}
+
+export function getPayeLinesForTests(periodId: string): PayePayrollLine[] {
+  return getLines(periodId).filter(isPayeLine);
 }

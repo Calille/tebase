@@ -105,6 +105,9 @@ export interface MainpayExportRecord {
   exportedBy: PayrollPartyRef;
 }
 
+/** Same shape as the Mainpay file log — a CSV handoff, not a live payroll run. */
+export type PayeExportRecord = MainpayExportRecord;
+
 export type MainpayValidationIssueCode =
   | "missing_ni"
   | "missing_rate"

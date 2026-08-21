@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Calendar,
   Download,
+  Link2,
   Search,
   Users,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import { payrollService } from "@/services/payroll/payrollService";
 import {
   formatGbp,
   type MainpayExportRecord,
+  type PayeExportRecord,
   type PayWeek,
   type PayrollPartyRef,
   type PayrollRun,
@@ -30,6 +32,10 @@ import {
 } from "@/types/payroll";
 import PayrollGroupSection from "./PayrollGroupSection";
 import MainpayExportDialog, { formatExportStamp } from "./MainpayExportDialog";
+import PayeExportDialog from "./PayeExportDialog";
+import MainpayConnectDialog from "./MainpayConnectDialog";
+import type { MainpayConnectionHealth } from "@/lib/mainpayConnection";
+import { DISCONNECTED_MAINPAY } from "@/lib/mainpayConnection";
 
 const Payroll = () => {
   const { user } = useAuth();
@@ -37,6 +43,8 @@ const Payroll = () => {
   const [periodId, setPeriodId] = useState<string>("");
   const [run, setRun] = useState<PayrollRun | null>(null);
   const [exports, setExports] = useState<MainpayExportRecord[]>([]);
+  const [payeExports, setPayeExports] = useState<PayeExportRecord[]>([]);
+  const [mpHealth, setMpHealth] = useState<MainpayConnectionHealth>(DISCONNECTED_MAINPAY);
   const [consultants, setConsultants] = useState<PayrollPartyRef[]>([]);
   const [schools, setSchools] = useState<PayrollPartyRef[]>([]);
   const [consultantId, setConsultantId] = useState("all");
@@ -48,6 +56,8 @@ const Payroll = () => {
   const [payeOpen, setPayeOpen] = useState(true);
   const [umbrellaOpen, setUmbrellaOpen] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
+  const [payeExportOpen, setPayeExportOpen] = useState(false);
+  const [mpConnectOpen, setMpConnectOpen] = useState(false);
 
   const exportedBy = user
     ? { id: user.id, name: user.name || user.username || user.email }
@@ -80,8 +90,14 @@ const Payroll = () => {
   }, []);
 
   const refreshExports = useCallback(async (id: string) => {
-    const records = await payrollService.getMainpayExports(id);
+    const [records, payeRecords, health] = await Promise.all([
+      payrollService.getMainpayExports(id),
+      payrollService.getPayeExports(id),
+      payrollService.getMainpayConnectionHealth(),
+    ]);
     setExports(records);
+    setPayeExports(payeRecords);
+    setMpHealth(health);
   }, []);
 
   useEffect(() => {
@@ -123,6 +139,7 @@ const Payroll = () => {
   }, [periodId, consultantId, schoolId, payrollType, search, refreshExports]);
 
   const latestExport = exports[0] ?? null;
+  const latestPayeExport = payeExports[0] ?? null;
   const selectedWeek = useMemo(
     () => weeks.find((week) => week.id === periodId),
     [weeks, periodId],
@@ -164,20 +181,36 @@ const Payroll = () => {
           )}
         </div>
 
-        {latestExport ? (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-            <p className="font-medium">Mainpay file already sent this week</p>
-            <p>
-              {formatExportStamp(latestExport.exportedAt)} · {latestExport.rowCount}{" "}
-              rows · {latestExport.exportedBy.name}
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            <p className="font-medium">Mainpay file not yet sent this week</p>
-            <p>Export from the Umbrella section when the week is ready.</p>
-          </div>
-        )}
+        <div className="flex flex-col gap-2 sm:items-end">
+          {latestPayeExport ? (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+              <p className="font-medium">PAYE file already sent this week</p>
+              <p>
+                {formatExportStamp(latestPayeExport.exportedAt)} · {latestPayeExport.rowCount}{" "}
+                rows · {latestPayeExport.exportedBy.name}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <p className="font-medium">PAYE file not yet sent this week</p>
+              <p>Export from the PAYE section when the week is ready.</p>
+            </div>
+          )}
+          {latestExport ? (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+              <p className="font-medium">Mainpay file already sent this week</p>
+              <p>
+                {formatExportStamp(latestExport.exportedAt)} · {latestExport.rowCount}{" "}
+                rows · {latestExport.exportedBy.name}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <p className="font-medium">Mainpay file not yet sent this week</p>
+              <p>Export from the Umbrella section when the week is ready.</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -317,6 +350,16 @@ const Payroll = () => {
         }}
         lines={payeLines}
         note="PAYE workers are paid gross by us. We owe employer NI, holiday accrual and pension on top of the figures below. Those on-costs are modelled on the record but are not included in margin yet (margin is still charge rate − pay rate)."
+        actions={
+          <Button
+            size="sm"
+            onClick={() => setPayeExportOpen(true)}
+            disabled={!periodId}
+          >
+            <Download className="mr-1 h-4 w-4" />
+            Export to PAYE
+          </Button>
+        }
       />
 
       <PayrollGroupSection
@@ -336,27 +379,65 @@ const Payroll = () => {
         lines={umbrellaLines}
         note="Umbrella workers are paid an assignment rate to Mainpay, who operate PAYE at their end. This subtotal is not like-for-like with PAYE gross — it is what we remit to the umbrella, not take-home pay, and it does not include the same employer on-costs."
         actions={
-          <Button
-            size="sm"
-            onClick={() => setExportOpen(true)}
-            disabled={!periodId}
-          >
-            <Download className="mr-1 h-4 w-4" />
-            Export for Mainpay
-          </Button>
+          <>
+            <Badge
+              className={
+                mpHealth.status === "connected"
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-slate-100 text-slate-700"
+              }
+            >
+              MP API {mpHealth.status === "connected" ? "connected (demo)" : "disconnected"}
+            </Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setMpConnectOpen(true)}
+            >
+              <Link2 className="mr-1 h-4 w-4" />
+              {mpHealth.status === "connected" ? "MP API" : "Connect to MP API"}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setExportOpen(true)}
+              disabled={!periodId}
+            >
+              <Download className="mr-1 h-4 w-4" />
+              Export for Mainpay
+            </Button>
+          </>
         }
       />
 
       {periodId && (
-        <MainpayExportDialog
-          open={exportOpen}
-          onOpenChange={setExportOpen}
-          periodId={periodId}
-          exportedBy={exportedBy}
-          onExported={() => {
-            void refreshExports(periodId);
-          }}
-        />
+        <>
+          <PayeExportDialog
+            open={payeExportOpen}
+            onOpenChange={setPayeExportOpen}
+            periodId={periodId}
+            exportedBy={exportedBy}
+            onExported={() => {
+              void refreshExports(periodId);
+            }}
+          />
+          <MainpayExportDialog
+            open={exportOpen}
+            onOpenChange={setExportOpen}
+            periodId={periodId}
+            exportedBy={exportedBy}
+            onExported={() => {
+              void refreshExports(periodId);
+            }}
+          />
+          <MainpayConnectDialog
+            open={mpConnectOpen}
+            onOpenChange={setMpConnectOpen}
+            health={mpHealth}
+            onChanged={() => {
+              void refreshExports(periodId);
+            }}
+          />
+        </>
       )}
     </div>
   );
