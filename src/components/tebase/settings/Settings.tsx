@@ -6,13 +6,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { Lock, Palette, Bell, User, Shield, Check } from "lucide-react";
+import { Lock, Palette, Bell, User, Shield, Check, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/contexts/AuthContext";
 import { authService } from "@/services/authService";
-import { toastDemoAction } from "@/lib/persistence";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
+import { settingsService } from "@/services/settings/settingsService";
+import {
+  DEFAULT_MARGIN_THRESHOLDS,
+  type MarginThresholdSettings,
+} from "@/types/settings";
 
 const Settings = () => {
   const { user, updateProfile } = useAuth();
@@ -25,6 +30,10 @@ const Settings = () => {
   const [notifications, setNotifications] = useState(true);
   const [fontSize, setFontSize] = useState("medium");
   const [themeApplied, setThemeApplied] = useState(false);
+  const [marginFloors, setMarginFloors] = useState<MarginThresholdSettings>(
+    DEFAULT_MARGIN_THRESHOLDS,
+  );
+  const [savingFloors, setSavingFloors] = useState(false);
 
   // Define available themes
   const colorThemes = [
@@ -66,6 +75,8 @@ const Settings = () => {
     if (user?.name) {
       setAccountName(user.name);
     }
+
+    settingsService.getMarginThresholds().then(setMarginFloors);
   }, [user]);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -116,6 +127,16 @@ const Settings = () => {
       });
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  const handleSaveMarginFloors = async () => {
+    setSavingFloors(true);
+    try {
+      const result = await settingsService.saveMarginThresholds(marginFloors);
+      toastWriteResult("Margin thresholds saved", result);
+    } finally {
+      setSavingFloors(false);
     }
   };
 
@@ -241,7 +262,7 @@ const Settings = () => {
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
 
       <Tabs defaultValue="account" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="account" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Account
@@ -256,6 +277,10 @@ const Settings = () => {
           >
             <Bell className="h-4 w-4" />
             Notifications
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Reports
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
@@ -595,6 +620,59 @@ const Settings = () => {
                   Save Notification Settings
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <Card>
+            <CardHeader>
+              <CardTitle>Low-margin alerts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Weekly Report flags a booking when its margin is below either
+                floor. These are starter values until you set policy — they are
+                stored here, not hardcoded on the page.
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="margin-pounds">£ per day floor</Label>
+                  <Input
+                    id="margin-pounds"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={marginFloors.poundsPerDayFloor}
+                    onChange={(event) =>
+                      setMarginFloors((current) => ({
+                        ...current,
+                        poundsPerDayFloor: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="margin-percent">% of charge floor</Label>
+                  <Input
+                    id="margin-percent"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={marginFloors.percentFloor}
+                    onChange={(event) =>
+                      setMarginFloors((current) => ({
+                        ...current,
+                        percentFloor: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <Button onClick={handleSaveMarginFloors} disabled={savingFloors}>
+                {savingFloors ? "Saving…" : "Save thresholds"}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

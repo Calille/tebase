@@ -5,11 +5,9 @@
  * fields exist on the cost model but are unused until product says otherwise.
  */
 
-/** Lightweight person/org ref — do not import Teacher or School domain types. */
-export interface PayrollPartyRef {
-  id: string;
-  name: string;
-}
+import type { PartyRef } from "./party";
+
+export type PayrollPartyRef = PartyRef;
 
 export type PayrollType = "paye" | "umbrella";
 
