@@ -28,6 +28,7 @@ import PayrollPage from "./pages/PayrollPage";
 import ITAdminPage from "./pages/ITAdminPage";
 import AWRTrackingPage from "./pages/AWRTrackingPage";
 import { ADMIN_ROLES } from "./lib/roles";
+import { SKIP_AUTH } from "./lib/authMode";
 import { isSupabaseConfigured } from "./lib/supabase";
 import routes from "tempo-routes";
 import React from "react";
@@ -57,7 +58,7 @@ function TempoRoutes() {
 }
 
 function App() {
-  if (!isSupabaseConfigured) {
+  if (!SKIP_AUTH && !isSupabaseConfigured) {
     return <MissingConfigPage />;
   }
 
@@ -66,7 +67,7 @@ function App() {
       <Suspense fallback={<p>Loading...</p>}>
         <div className="app">
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={SKIP_AUTH ? <Navigate to="/" replace /> : <LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />

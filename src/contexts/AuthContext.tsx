@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, authService } from '@/services/authService';
 import { supabase } from '@/lib/supabase';
 import { errorMessage } from '@/lib/errors';
+import { DEMO_VIEWER, SKIP_AUTH } from '@/lib/authMode';
 
 interface AuthContextType {
   user: User | null;
@@ -35,6 +36,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (SKIP_AUTH) {
+      setUser(DEMO_VIEWER);
+      setLoading(false);
+      return;
+    }
+
     // Check for existing session on mount
     const checkUser = async () => {
       try {
@@ -71,6 +78,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const signIn = async (username: string, password: string) => {
+    if (SKIP_AUTH) {
+      setUser(DEMO_VIEWER);
+      return { error: null };
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -117,6 +129,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signOut = async () => {
+    if (SKIP_AUTH) {
+      setUser(DEMO_VIEWER);
+      return { error: null };
+    }
+
     setLoading(true);
     setError(null);
     try {
