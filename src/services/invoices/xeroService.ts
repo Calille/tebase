@@ -14,6 +14,7 @@ import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { timesheetService } from "@/services/timesheets/timesheetService";
 import { weeklyReportService } from "@/services/weeklyReport/weeklyReportService";
 import { BILL_TOS, billToById, billToForSchoolId } from "@/services/invoices/mockBillTos";
+import { getDataset } from "@/mocks";
 import { linesFromSheet, splitGroups } from "@/services/invoices/pushLines";
 import { validateXeroPush } from "@/services/invoices/pushValidation";
 
@@ -177,7 +178,7 @@ export const xeroService = {
   },
 
   async getAgedDebt(): Promise<XeroAgedDebtSummary> {
-    return emptyAgedDebt();
+    return getDataset().agedDebt;
   },
 
   async getWeekReconciliation(

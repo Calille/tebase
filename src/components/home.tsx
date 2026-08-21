@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageLayout from "./tebase/PageLayout";
 import DemoBanner from "./tebase/shared/DemoBanner";
@@ -6,76 +6,88 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import {
-  Phone,
   TrendingUp,
-  UserCheck,
-  Headphones,
   Calendar,
   Building,
   Users,
   DollarSign,
   AlertTriangle,
-  Clock,
   ChevronRight,
   BarChart3,
   FileText,
   ArrowUpRight,
-  ArrowDownRight,
+  Clock,
 } from "lucide-react";
+import { teacherService } from "@/services/teacherService";
+import { schoolService } from "@/services/schoolService";
+import { bookingService } from "@/services/bookingService";
+import { weeklyReportService } from "@/services/weeklyReport";
+import { formatGbp } from "@/types/payroll";
+import { payWeekContaining } from "@/lib/payWeek";
 
 const Home = () => {
-  // Sample data for low margin bookings
-  const lowMarginBookings = [
-    {
-      consultant: "David Wilson",
-      school: "Northside Academy",
-      currentRate: 125,
-      targetRate: 179,
-      currentMargin: 21,
-    },
-    {
-      consultant: "Sarah Johnson",
-      school: "Oakridge Elementary",
-      currentRate: 130,
-      targetRate: 186,
-      currentMargin: 25,
-    },
-    {
-      consultant: "Jennifer Lee",
-      school: "Riverside College",
-      currentRate: 140,
-      targetRate: 200,
-      currentMargin: 27,
-    },
-  ];
+  const [staffCount, setStaffCount] = useState(0);
+  const [schoolCount, setSchoolCount] = useState(0);
+  const [bookingCount, setBookingCount] = useState(0);
+  const [revenue, setRevenue] = useState(0);
+  const [revenueDelta, setRevenueDelta] = useState<number | null>(null);
+  const [lowMarginBookings, setLowMarginBookings] = useState<
+    { consultant: string; school: string; currentRate: number; targetRate: number; currentMargin: number }[]
+  >([]);
+  const [upcomingBookings, setUpcomingBookings] = useState<
+    { id: string; school: string; teacher: string; date: string; subject: string; status: string }[]
+  >([]);
 
-  // Sample data for upcoming bookings
-  const upcomingBookings = [
-    {
-      id: "book-001",
-      school: "Westfield High School",
-      teacher: "John Smith",
-      date: "Today, 9:00 AM",
-      subject: "Mathematics",
-      status: "confirmed",
-    },
-    {
-      id: "book-002",
-      school: "Oakridge Elementary",
-      teacher: "Sarah Johnson",
-      date: "Today, 1:30 PM",
-      subject: "English",
-      status: "pending",
-    },
-    {
-      id: "book-003",
-      school: "Riverside College",
-      teacher: "Michael Chen",
-      date: "Tomorrow, 10:15 AM",
-      subject: "Chemistry",
-      status: "confirmed",
-    },
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const week = payWeekContaining(new Date());
+      const [teachers, schools, report, bookings] = await Promise.all([
+        teacherService.getTeachers(),
+        schoolService.getSchools(),
+        weeklyReportService.getReport({ periodId: week.id, scope: "team" }),
+        bookingService.getBookings(),
+      ]);
+      if (cancelled) return;
+      setStaffCount(teachers.filter((teacher) => teacher.status === "active").length);
+      setSchoolCount(schools.length);
+      const weekBookings = bookings.filter(
+        (booking) => booking.startDate <= week.weekEnding && booking.endDate >= week.startsOn,
+      );
+      setBookingCount(weekBookings.length);
+      setRevenue(report.headlines.current.chargeTotal);
+      setRevenueDelta(report.headlines.charge.lastWeek.percent);
+      setLowMarginBookings(
+        report.lowMargin.flatMap((group) =>
+          group.bookings.slice(0, 2).map((booking) => ({
+            consultant: booking.consultant.name,
+            school: booking.school.name,
+            currentRate: booking.chargeRate,
+            targetRate: Math.round(booking.payRate + 50),
+            currentMargin: booking.marginPercent,
+          })),
+        ).slice(0, 6),
+      );
+      const today = new Date().toISOString().slice(0, 10);
+      setUpcomingBookings(
+        bookings
+          .filter((booking) => booking.status !== "cancelled" && booking.endDate >= today)
+          .sort((a, b) => a.startDate.localeCompare(b.startDate))
+          .slice(0, 5)
+          .map((booking) => ({
+            id: booking.id,
+            school: booking.school.name,
+            teacher: booking.teacher.name,
+            date: booking.startDate === today ? "Today" : booking.startDate,
+            subject: booking.subject,
+            status: booking.status,
+          })),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <PageLayout
@@ -105,7 +117,7 @@ const Home = () => {
     >
           <div className="p-6">
             <div className="max-w-[1400px] mx-auto space-y-6">
-              <DemoBanner message="Dashboard figures are sample data until bookings, payroll, and margins are connected to live queries." />
+                  <DemoBanner message="Dashboard figures are rolled up from the shared seed: the same bookings feed payroll, timesheets and the weekly report." />
               {/* Key Metrics */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
@@ -117,7 +129,7 @@ const Home = () => {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-3xl font-bold text-gray-800">248</p>
+                        <p className="text-3xl font-bold text-gray-800">{staffCount}</p>
                         <p className="text-xs text-gray-500">
                           Available for booking
                         </p>
@@ -145,7 +157,7 @@ const Home = () => {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-3xl font-bold text-gray-800">52</p>
+                        <p className="text-3xl font-bold text-gray-800">{schoolCount}</p>
                         <p className="text-xs text-gray-500">
                           Currently partnered
                         </p>
@@ -173,7 +185,7 @@ const Home = () => {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-3xl font-bold text-gray-800">124</p>
+                        <p className="text-3xl font-bold text-gray-800">{bookingCount}</p>
                         <p className="text-xs text-gray-500">This week</p>
                       </div>
                       <div className="p-3 bg-purple-50 rounded-full">
@@ -198,7 +210,7 @@ const Home = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-3xl font-bold text-gray-800">
-                          £22,500
+                          {formatGbp(revenue)}
                         </p>
                         <p className="text-xs text-gray-500">This week</p>
                       </div>

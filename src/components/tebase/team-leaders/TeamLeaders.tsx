@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,86 +16,15 @@ import {
   Calendar,
   MessageSquare,
 } from "lucide-react";
-
-interface TeamLeader {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-  phone: string;
-  avatar: string;
-  department: string;
-  teamSize: number;
-  performance: number;
-  status: "active" | "on leave" | "training";
-}
+import { extrasService, type TeamLeaderCard as TeamLeader } from "@/services/extrasService";
 
 const TeamLeaders = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [teamLeaders, setTeamLeaders] = useState<TeamLeader[]>([]);
 
-  // Sample team leaders data
-  const teamLeaders: TeamLeader[] = [
-    {
-      id: "tl-001",
-      name: "Sarah Johnson",
-      role: "Senior Team Leader",
-      email: "s.johnson@tebase.edu",
-      phone: "+44 161 234 5678",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-      department: "Secondary Education",
-      teamSize: 12,
-      performance: 92,
-      status: "active",
-    },
-    {
-      id: "tl-002",
-      name: "Michael Chen",
-      role: "Team Leader",
-      email: "m.chen@tebase.edu",
-      phone: "+44 161 345 6789",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael",
-      department: "Primary Education",
-      teamSize: 8,
-      performance: 88,
-      status: "active",
-    },
-    {
-      id: "tl-003",
-      name: "Emily Rodriguez",
-      role: "Team Leader",
-      email: "e.rodriguez@tebase.edu",
-      phone: "+44 161 456 7890",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emily",
-      department: "Special Education",
-      teamSize: 6,
-      performance: 95,
-      status: "on leave",
-    },
-    {
-      id: "tl-004",
-      name: "David Wilson",
-      role: "Senior Team Leader",
-      email: "d.wilson@tebase.edu",
-      phone: "+44 161 567 8901",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=david",
-      department: "Higher Education",
-      teamSize: 15,
-      performance: 90,
-      status: "active",
-    },
-    {
-      id: "tl-005",
-      name: "Jessica Taylor",
-      role: "Team Leader",
-      email: "j.taylor@tebase.edu",
-      phone: "+44 161 678 9012",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jessica",
-      department: "Primary Education",
-      teamSize: 7,
-      performance: 86,
-      status: "training",
-    },
-  ];
+  useEffect(() => {
+    extrasService.getTeamLeaders().then(setTeamLeaders);
+  }, []);
 
   // Filter team leaders based on search term
   const filteredTeamLeaders = teamLeaders.filter(
@@ -225,19 +154,17 @@ const TeamLeaders = () => {
                       Team Composition
                     </h4>
                     <div className="flex gap-1">
-                      {Array.from({ length: Math.min(5, leader.teamSize) }).map(
-                        (_, i) => (
+                      {leader.memberNames.slice(0, 5).map((member) => (
                           <Avatar
-                            key={i}
+                            key={member}
                             className="h-8 w-8 border border-white"
                           >
                             <AvatarImage
-                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=team${leader.id}${i}`}
+                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(member)}`}
                             />
-                            <AvatarFallback>T</AvatarFallback>
+                            <AvatarFallback>{member.charAt(0)}</AvatarFallback>
                           </Avatar>
-                        ),
-                      )}
+                        ))}
                       {leader.teamSize > 5 && (
                         <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium">
                           +{leader.teamSize - 5}

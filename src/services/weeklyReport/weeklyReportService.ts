@@ -18,16 +18,7 @@ import {
   type WeeklyReportScope,
   type WeekStats,
 } from "@/types/weeklyReport";
-import {
-  currentRateForTeacher,
-  mockDormantSchools,
-  mockFillRate,
-  mockForecast,
-  mockInterruptions,
-  mockLowMarginBookings,
-  mockStatsForWeek,
-  mockTrend,
-} from "./mockData";
+import { getDataset } from "@/mocks";
 import { consultantById, consultantByName } from "./mockRefs";
 
 function compared(
@@ -108,6 +99,17 @@ export function groupLowMarginBySchool(
   );
 }
 
+function currentRateForTeacher(teacher: TeacherWithAWR): {
+  payRate: number;
+  chargeRate: number;
+} | null {
+  const booking = getDataset().bookings.find(
+    (item) => item.teacherId === teacher.id && item.status !== "cancelled",
+  );
+  if (!booking) return null;
+  return { payRate: booking.payRate, chargeRate: booking.chargeRate };
+}
+
 function weeksUntilParity(teacher: TeacherWithAWR): number {
   return Math.max(0, 12 - teacher.awrWeeks);
 }
@@ -128,7 +130,7 @@ async function awrWarnings(): Promise<AwrWeek12Warning[]> {
     })
     .map((teacher) => {
       const projected = AWRService.getProjectedQualificationDate(teacher);
-      const rates = currentRateForTeacher(teacher.name);
+      const rates = currentRateForTeacher(teacher);
       const currentMargin =
         rates != null ? rates.chargeRate - rates.payRate : null;
       return {
@@ -194,48 +196,57 @@ export const weeklyReportService = {
       awrWarnings(),
     ]);
 
+    const key =
+      input.scope === "self" && consultantId
+        ? `self:${period.id}:${consultantId}`
+        : `team:${period.id}`;
+    const seeded = getDataset().weeklyReports[key];
     const lastWeek = payWeekContaining(
       addWeeks(parseIsoDate(period.weekEnding), -1),
     );
     const seasonal = sameWeekLastTerm(period);
 
-    const currentStats = mockStatsForWeek(period, consultantId);
-    const lastWeekStats = mockStatsForWeek(lastWeek, consultantId);
-    const lastTermStats = mockStatsForWeek(seasonal.week, consultantId);
+    if (seeded) {
+      return {
+        ...seeded,
+        period,
+        scope: input.scope,
+        consultant,
+        thresholds,
+        awrWarnings: awr,
+        unapprovedTimesheets: unapproved,
+      };
+    }
 
-    const lowMargin = groupLowMarginBySchool(
-      mockLowMarginBookings(period, consultantId).filter((booking) =>
-        isLowMarginBooking(booking, thresholds),
-      ),
-    );
-
-    const interruptions = mockInterruptions(period, consultantId);
-    const forecast = mockForecast(period, consultantId);
+    const empty = {
+      chargeTotal: 0,
+      payCost: 0,
+      marginGbp: 0,
+      marginPercent: 0,
+      daysFilled: 0,
+    };
 
     return {
       period,
       scope: input.scope,
       consultant,
-      headlines: compared(
-        currentStats,
-        lastWeekStats,
-        lastTermStats,
-        seasonal.label,
-        seasonal.isProxy,
-      ),
-      lowMargin,
+      headlines: compared(empty, empty, empty, seasonal.label, seasonal.isProxy),
+      lowMargin: [],
       thresholds,
       awrWarnings: awr,
       unapprovedTimesheets: unapproved,
-      interruptions,
-      interruptionMarginLost: interruptions.reduce(
-        (sum, item) => sum + item.marginLost,
-        0,
-      ),
-      fillRate: mockFillRate(period, consultantId),
-      dormantSchools: mockDormantSchools(period),
-      forecast,
-      marginTrend: mockTrend(period, consultantId),
+      interruptions: [],
+      interruptionMarginLost: 0,
+      fillRate: { received: 0, filled: 0, lost: 0, fillPercent: 0, lossReasons: [] },
+      dormantSchools: [],
+      forecast: {
+        period: lastWeek,
+        bookings: [],
+        projectedCharge: 0,
+        projectedMargin: 0,
+        bookingCount: 0,
+      },
+      marginTrend: [],
     };
   },
 };

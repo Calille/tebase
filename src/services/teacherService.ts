@@ -147,64 +147,17 @@ export type TeacherFormSeed = Omit<Partial<Teacher>, "address"> & {
 };
 
 
-const teachersStore: Teacher[] = [
-  {
-    id: "teacher-1",
-    name: "John Smith",
-    email: "john.smith@example.com",
-    phone: "07700 900123",
-    subjects: ["Mathematics", "Physics"],
-    status: "active",
-    lastBooking: "2023-05-15",
-    rating: 4.8,
-    favorite: true,
-    availability: "full-time",
-    region: "London",
-    documents: [],
-  },
-  {
-    id: "teacher-2",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@example.com",
-    phone: "07700 900456",
-    subjects: ["English", "History"],
-    status: "active",
-    lastBooking: "2023-05-10",
-    rating: 4.5,
-    favorite: false,
-    availability: "part-time",
-    region: "Manchester",
-    documents: [],
-  },
-  {
-    id: "teacher-3",
-    name: "David Williams",
-    email: "david.williams@example.com",
-    phone: "07700 900789",
-    subjects: ["Chemistry", "Biology"],
-    status: "inactive",
-    lastBooking: "2023-04-20",
-    rating: 4.2,
-    favorite: false,
-    availability: "weekends",
-    region: "Birmingham",
-    documents: [],
-  },
-  {
-    id: "teacher-4",
-    name: "Emma Brown",
-    email: "emma.brown@example.com",
-    phone: "07700 900321",
-    subjects: ["Art", "Music"],
-    status: "pending",
-    lastBooking: "",
-    rating: 0,
-    favorite: false,
-    availability: "part-time",
-    region: "Leeds",
-    documents: [],
-  },
-];
+import { datasetGeneration, getDataset } from "@/mocks";
+
+let teachersStore: Teacher[] = [];
+let seenGeneration = -1;
+
+function hydrateTeachers() {
+  const generation = datasetGeneration();
+  if (seenGeneration === generation && teachersStore.length > 0) return;
+  teachersStore = getDataset().teacherProfiles.map(cloneTeacher);
+  seenGeneration = generation;
+}
 
 function cloneTeacher(teacher: Teacher): Teacher {
   return {
@@ -257,10 +210,12 @@ function findTeacherIndex(id: string): number {
  */
 export const teacherService = {
   async getTeachers(): Promise<Teacher[]> {
+    hydrateTeachers();
     return teachersStore.map(cloneTeacher);
   },
 
   async getTeacherById(id: string): Promise<Teacher | null> {
+    hydrateTeachers();
     const teacher = teachersStore.find((item) => item.id === id);
     return teacher ? cloneTeacher(teacher) : null;
   },
@@ -268,6 +223,7 @@ export const teacherService = {
   async createTeacher(
     teacher: Partial<Teacher> & { name: string; email: string }
   ): Promise<CreateResult<Teacher>> {
+    hydrateTeachers();
     try {
       const newTeacher: Teacher = {
         phone: teacher.phone || "",
@@ -295,6 +251,7 @@ export const teacherService = {
   },
 
   async updateTeacher(id: string, patch: TeacherPatch): Promise<WriteResult> {
+    hydrateTeachers();
     const index = findTeacherIndex(id);
     if (index === -1) {
       return failedWriteResult("Teacher not found");
@@ -305,6 +262,7 @@ export const teacherService = {
   },
 
   async deleteTeacher(id: string): Promise<WriteResult> {
+    hydrateTeachers();
     const index = findTeacherIndex(id);
     if (index === -1) {
       return failedWriteResult("Teacher not found");
@@ -340,6 +298,7 @@ export const teacherService = {
     teacherId: string,
     document: { name: string; status: string; expiryDate: string }
   ): Promise<WriteResult> {
+    hydrateTeachers();
     const index = findTeacherIndex(teacherId);
     if (index === -1) {
       return failedWriteResult("Teacher not found");
@@ -365,6 +324,7 @@ export const teacherService = {
   },
 
   async getTeachersByRegion(region: string): Promise<Teacher[]> {
+    hydrateTeachers();
     return teachersStore
       .filter((teacher) => teacher.region === region)
       .map(cloneTeacher);
@@ -373,12 +333,14 @@ export const teacherService = {
   async getTeachersByAvailability(
     availability: "full-time" | "part-time" | "weekends"
   ): Promise<Teacher[]> {
+    hydrateTeachers();
     return teachersStore
       .filter((teacher) => teacher.availability === availability)
       .map(cloneTeacher);
   },
 
   async searchTeachers(query: string): Promise<Teacher[]> {
+    hydrateTeachers();
     const needle = query.toLowerCase();
     return teachersStore
       .filter(

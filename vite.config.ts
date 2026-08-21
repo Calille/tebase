@@ -33,6 +33,16 @@ export default defineConfig({
   optimizeDeps: {
     entries: ["src/main.tsx", "src/tempobook/**/*"],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes("/src/mocks/")) return "mocks";
+          return undefined;
+        },
+      },
+    },
+  },
   plugins: [
     react({
       plugins: conditionalPlugins,

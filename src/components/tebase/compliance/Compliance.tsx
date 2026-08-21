@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -26,103 +26,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { extrasService, type ComplianceAudit, type ComplianceItem } from "@/services/extrasService";
 
 const Compliance = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [complianceItems, setComplianceItems] = useState<ComplianceItem[]>([]);
+  const [auditLogs, setAuditLogs] = useState<ComplianceAudit[]>([]);
 
-  // Sample compliance data
-  const complianceItems = [
-    {
-      id: "comp-001",
-      name: "DBS Checks",
-      status: "compliant",
-      lastReview: "2023-05-15",
-      nextReview: "2024-05-15",
-      completionRate: 100,
-      description: "Background checks for all teaching staff",
-    },
-    {
-      id: "comp-002",
-      name: "Health & Safety Training",
-      status: "compliant",
-      lastReview: "2023-04-10",
-      nextReview: "2024-04-10",
-      completionRate: 100,
-      description: "Mandatory health and safety training for all staff",
-    },
-    {
-      id: "comp-003",
-      name: "Data Protection",
-      status: "attention",
-      lastReview: "2023-03-20",
-      nextReview: "2023-09-20",
-      completionRate: 85,
-      description: "GDPR compliance and data protection policies",
-    },
-    {
-      id: "comp-004",
-      name: "Teacher Qualifications",
-      status: "compliant",
-      lastReview: "2023-06-01",
-      nextReview: "2024-06-01",
-      completionRate: 100,
-      description: "Verification of teaching qualifications and certifications",
-    },
-    {
-      id: "comp-005",
-      name: "Safeguarding Training",
-      status: "attention",
-      lastReview: "2023-02-15",
-      nextReview: "2023-08-15",
-      completionRate: 92,
-      description: "Child protection and safeguarding training",
-    },
-    {
-      id: "comp-006",
-      name: "Insurance Coverage",
-      status: "non-compliant",
-      lastReview: "2022-12-10",
-      nextReview: "2023-06-10",
-      completionRate: 60,
-      description: "Professional liability and insurance coverage",
-    },
-  ];
-
-  // Sample audit data
-  const auditLogs = [
-    {
-      id: "audit-001",
-      date: "2023-06-15",
-      action: "DBS Check Verification",
-      user: "Admin User",
-      details: "Verified DBS checks for 5 new teachers",
-      status: "completed",
-    },
-    {
-      id: "audit-002",
-      date: "2023-06-10",
-      action: "Data Protection Audit",
-      user: "Compliance Officer",
-      details: "Quarterly review of data protection measures",
-      status: "attention",
-    },
-    {
-      id: "audit-003",
-      date: "2023-06-05",
-      action: "Health & Safety Inspection",
-      user: "Safety Officer",
-      details: "Annual health and safety inspection completed",
-      status: "completed",
-    },
-    {
-      id: "audit-004",
-      date: "2023-06-01",
-      action: "Insurance Policy Review",
-      user: "Finance Manager",
-      details: "Review of current insurance policies",
-      status: "pending",
-    },
-  ];
+  useEffect(() => {
+    extrasService.getComplianceItems().then(setComplianceItems);
+    extrasService.getComplianceAudits().then(setAuditLogs);
+  }, []);
 
   // Get status icon
   const getStatusIcon = (status: string) => {

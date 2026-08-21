@@ -1,43 +1,18 @@
 import { addWeeks, differenceInCalendarWeeks, startOfWeek } from "date-fns";
+import {
+  buildAcademicCalendar,
+  type AcademicTerm,
+  type HalfTermWindow,
+} from "@/lib/academicCalendar";
 import { PAY_WEEK_STARTS_ON, parseIsoDate, payWeekContaining, toIsoDate } from "@/lib/payWeek";
 import type { PayWeek } from "@/types/payroll";
 
-/**
- * Stub English academic terms — not Keep Education’s calendar.
- * Used only so “same week last term” and “last half-term” have a shape
- * we can swap for a real term table later.
- */
-export interface AcademicTerm {
-  id: string;
-  name: string;
-  startsOn: string;
-  endsOn: string;
-}
+export type { AcademicTerm, HalfTermWindow };
 
-export interface HalfTermWindow {
-  id: string;
-  label: string;
-  startsOn: string;
-  endsOn: string;
-}
+const GENERATED = buildAcademicCalendar(new Date());
 
-export const STUB_TERMS: AcademicTerm[] = [
-  { id: "autumn-2025", name: "Autumn 2025", startsOn: "2025-09-02", endsOn: "2025-12-19" },
-  { id: "spring-2026", name: "Spring 2026", startsOn: "2026-01-05", endsOn: "2026-03-27" },
-  { id: "summer-2026", name: "Summer 2026", startsOn: "2026-04-13", endsOn: "2026-07-17" },
-  { id: "autumn-2026", name: "Autumn 2026", startsOn: "2026-09-01", endsOn: "2026-12-18" },
-];
-
-export const STUB_HALF_TERMS: HalfTermWindow[] = [
-  { id: "autumn-2025-1", label: "Autumn 2025 (first half)", startsOn: "2025-09-02", endsOn: "2025-10-24" },
-  { id: "autumn-2025-2", label: "Autumn 2025 (second half)", startsOn: "2025-11-03", endsOn: "2025-12-19" },
-  { id: "spring-2026-1", label: "Spring 2026 (first half)", startsOn: "2026-01-05", endsOn: "2026-02-13" },
-  { id: "spring-2026-2", label: "Spring 2026 (second half)", startsOn: "2026-02-23", endsOn: "2026-03-27" },
-  { id: "summer-2026-1", label: "Summer 2026 (first half)", startsOn: "2026-04-13", endsOn: "2026-05-22" },
-  { id: "summer-2026-2", label: "Summer 2026 (second half)", startsOn: "2026-06-02", endsOn: "2026-07-17" },
-  { id: "autumn-2026-1", label: "Autumn 2026 (first half)", startsOn: "2026-09-01", endsOn: "2026-10-23" },
-  { id: "autumn-2026-2", label: "Autumn 2026 (second half)", startsOn: "2026-11-02", endsOn: "2026-12-18" },
-];
+export const STUB_TERMS: AcademicTerm[] = GENERATED.terms;
+export const STUB_HALF_TERMS: HalfTermWindow[] = GENERATED.halfTerms;
 
 const WEEK_OPTS = { weekStartsOn: PAY_WEEK_STARTS_ON } as const;
 

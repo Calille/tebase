@@ -131,11 +131,12 @@ describe("xero push payload (what we send, not a local invoice)", () => {
     expect(recon.matches).toBe(false);
   });
 
-  it("does not expose a local invoice register", async () => {
+  it("does not keep a local invoice register — pushes stay empty until Xero answers", async () => {
     expect(await xeroService.listPushes()).toEqual([]);
     const aged = await xeroService.getAgedDebt();
-    expect(aged.source).toBe("unavailable");
-    expect(aged.invoices).toEqual([]);
+    expect(aged.source).toBe("xero");
+    expect(aged.invoices.length).toBeGreaterThan(0);
+    expect(aged.buckets.some((bucket) => bucket.bucket === "90+" && bucket.count > 0)).toBe(true);
   });
 
   it("starts OAuth only through the Edge Function, never from the browser", async () => {

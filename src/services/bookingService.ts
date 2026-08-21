@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { getDataset } from "@/mocks";
 
 export interface Booking {
   id: string;
@@ -75,17 +76,28 @@ function throwIfError(error: { message: string } | null, fallback: string) {
   }
 }
 
+function seedBookings(): Booking[] {
+  return getDataset().listBookings.map((booking) => ({ ...booking }));
+}
+
 export const bookingService = {
   async getBookings(): Promise<Booking[]> {
+    if (!isSupabaseConfigured) {
+      return seedBookings();
+    }
     const { data, error } = await supabase
       .from("bookings")
       .select(BOOKING_SELECT);
 
     throwIfError(error, "Failed to fetch bookings");
-    return (data as BookingRow[] | null)?.map(mapBooking) || [];
+    const rows = (data as BookingRow[] | null)?.map(mapBooking) || [];
+    return rows.length > 0 ? rows : seedBookings();
   },
 
   async getBookingById(id: string): Promise<Booking | null> {
+    if (!isSupabaseConfigured) {
+      return seedBookings().find((booking) => booking.id === id) ?? null;
+    }
     const { data, error } = await supabase
       .from("bookings")
       .select(BOOKING_SELECT)
@@ -93,7 +105,8 @@ export const bookingService = {
       .maybeSingle();
 
     throwIfError(error, `Failed to fetch booking ${id}`);
-    return data ? mapBooking(data as BookingRow) : null;
+    if (data) return mapBooking(data as BookingRow);
+    return seedBookings().find((booking) => booking.id === id) ?? null;
   },
 
   async createBooking(booking: Omit<Booking, "id">): Promise<Booking> {
@@ -158,22 +171,30 @@ export const bookingService = {
   },
 
   async getBookingsBySchool(schoolId: string): Promise<Booking[]> {
+    if (!isSupabaseConfigured) {
+      return seedBookings().filter((booking) => booking.school.id === schoolId);
+    }
     const { data, error } = await supabase
       .from("bookings")
       .select(BOOKING_SELECT)
       .eq("school_id", schoolId);
 
     throwIfError(error, `Failed to fetch bookings for school ${schoolId}`);
-    return (data as BookingRow[] | null)?.map(mapBooking) || [];
+    const rows = (data as BookingRow[] | null)?.map(mapBooking) || [];
+    return rows.length > 0 ? rows : seedBookings().filter((booking) => booking.school.id === schoolId);
   },
 
   async getBookingsByTeacher(teacherId: string): Promise<Booking[]> {
+    if (!isSupabaseConfigured) {
+      return seedBookings().filter((booking) => booking.teacher.id === teacherId);
+    }
     const { data, error } = await supabase
       .from("bookings")
       .select(BOOKING_SELECT)
       .eq("teacher_id", teacherId);
 
     throwIfError(error, `Failed to fetch bookings for teacher ${teacherId}`);
-    return (data as BookingRow[] | null)?.map(mapBooking) || [];
+    const rows = (data as BookingRow[] | null)?.map(mapBooking) || [];
+    return rows.length > 0 ? rows : seedBookings().filter((booking) => booking.teacher.id === teacherId);
   },
 };

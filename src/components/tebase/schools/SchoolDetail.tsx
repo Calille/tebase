@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Mail,
@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Notes from "../shared/Notes";
+import { schoolService } from "@/services/schoolService";
+import { extrasService } from "@/services/extrasService";
 
 interface SchoolDetailProps {
   schoolId?: string;
@@ -23,39 +25,97 @@ interface SchoolDetailProps {
 }
 
 const SchoolDetail = ({
-  schoolId = "sch-001",
+  schoolId = "sch-westfield",
   onBack = () => {},
 }: SchoolDetailProps) => {
-  // Mock school data
-  const school = {
-    id: schoolId,
-    name: "Westfield High School",
-    address: "123 Education Ave, Suite 100, Manchester, M1 1AA",
-    city: "Manchester",
-    contactPerson: "Jane Wilson",
-    email: "j.wilson@westfield.edu",
-    phone: "+44 161 123 4567",
-    website: "https://www.westfield-high.edu",
-    type: "secondary",
-    status: "active",
-    enrollmentCount: 850,
-    staffCount: 65,
-    establishedYear: "1985",
-    lastBooking: "2023-06-15",
-    nextBooking: "2023-07-10",
-    teachersNeeded: 3,
-    rating: 4.8,
-    notes:
-      "Excellent relationship with this school. They prefer experienced teachers with strong classroom management skills.",
-    tags: ["STEM Focus", "Languages", "Arts Program"],
-    departments: [
-      { name: "Mathematics", head: "Dr. Robert Brown", teachers: 8 },
-      { name: "Science", head: "Dr. Sarah Chen", teachers: 10 },
-      { name: "English", head: "Ms. Emily Davis", teachers: 7 },
-      { name: "Languages", head: "Mr. Carlos Rodriguez", teachers: 5 },
-      { name: "Arts", head: "Ms. Amelia Wright", teachers: 4 },
-    ],
-  };
+  const [loading, setLoading] = useState(true);
+  const [school, setSchool] = useState<{
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    contactPerson: string;
+    email: string;
+    phone: string;
+    website: string;
+    type: string;
+    status: string;
+    enrollmentCount: number;
+    staffCount: number;
+    establishedYear: string;
+    lastBooking: string;
+    nextBooking: string;
+    teachersNeeded: number;
+    rating: number;
+    notes: string;
+    tags: string[];
+    departments: { name: string; head: string; teachers: number }[];
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const row = await schoolService.getSchoolById(schoolId);
+      const vacancies = await extrasService.getVacancies();
+      if (cancelled) return;
+      if (!row) {
+        setSchool(null);
+        setLoading(false);
+        return;
+      }
+      const needed = vacancies.filter((item) => item.schoolId === row.id && item.status === "open").length;
+      setSchool({
+        id: row.id,
+        name: row.name,
+        address: `${row.address.street}, ${row.address.city}, ${row.address.zip}`,
+        city: row.address.city,
+        contactPerson: row.primaryContact.name,
+        email: row.primaryContact.email,
+        phone: row.phone,
+        website: row.website,
+        type: row.type,
+        status: "active",
+        enrollmentCount: row.numberOfStudents,
+        staffCount: Math.max(8, Math.round(row.numberOfStudents / 18)),
+        establishedYear: String(row.yearEstablished),
+        lastBooking: row.primaryContact.lastContactDate,
+        nextBooking: row.historicalPlacementNotes || "See bookings tab",
+        teachersNeeded: needed,
+        rating: 4.6,
+        notes: row.administrativeNotes || row.substituteRequirements,
+        tags: [row.type, row.district, ...(row.specialPrograms ?? [])].filter(Boolean),
+        departments: (row.gradeLevels ?? []).slice(0, 5).map((level, index) => ({
+          name: level,
+          head: row.headteacherContact.name,
+          teachers: 3 + (index % 4),
+        })),
+      });
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [schoolId]);
+
+  if (loading) {
+    return (
+      <div className="w-full bg-gray-50 p-6 rounded-lg">
+        <p className="text-gray-500">Loading school…</p>
+      </div>
+    );
+  }
+
+  if (!school) {
+    return (
+      <div className="w-full bg-gray-50 p-6 rounded-lg">
+        <Button variant="ghost" onClick={onBack} className="mr-2">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Schools
+        </Button>
+        <p className="mt-6 text-gray-500">School not found in the seed dataset.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-gray-50 p-6 rounded-lg">

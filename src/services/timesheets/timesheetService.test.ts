@@ -19,7 +19,7 @@ describe("timesheetService", () => {
     });
     expect(board.outstanding.count).toBeGreaterThan(0);
     expect(board.confirmed.count).toBeGreaterThan(0);
-    expect(board.queried.count).toBe(1);
+    expect(board.queried.count).toBeGreaterThan(0);
     expect(board.cannotInvoice.chargeValue).toBe(
       Math.round(
         (board.outstanding.chargeValue + board.queried.chargeValue) * 100,

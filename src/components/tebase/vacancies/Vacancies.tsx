@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toastDemoAction } from "@/lib/persistence";
 import {
   Search,
@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { extrasService } from "@/services/extrasService";
 
 interface Vacancy {
   id: string;
@@ -72,118 +73,17 @@ const Vacancies = () => {
     requirements: [] as string[],
   });
 
-  // Sample data
-  const schools = [
-    { id: "sch-001", name: "Westfield High School" },
-    { id: "sch-002", name: "Oakridge Elementary" },
-    { id: "sch-003", name: "Riverside College" },
-    { id: "sch-004", name: "Sunshine Special School" },
-    { id: "sch-005", name: "Northside Academy" },
-  ];
+  const [schools, setSchools] = useState<{ id: string; name: string }[]>([]);
+  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
 
-  const vacancies: Vacancy[] = [
-    {
-      id: "vac-001",
-      title: "Mathematics Teacher",
-      schoolId: "sch-001",
-      schoolName: "Westfield High School",
-      location: "Manchester",
-      subject: "Mathematics",
-      type: "full-time",
-      startDate: "2023-09-01",
-      rate: 150,
-      status: "open",
-      description:
-        "We are seeking a qualified Mathematics teacher to join our team. The successful candidate will be responsible for teaching Mathematics to students in grades 9-12.",
-      requirements: [
-        "Bachelor's degree in Mathematics or related field",
-        "Teaching certification",
-        "2+ years of teaching experience",
-      ],
-      postedDate: "2023-06-01",
-    },
-    {
-      id: "vac-002",
-      title: "English Teacher",
-      schoolId: "sch-002",
-      schoolName: "Oakridge Elementary",
-      location: "Birmingham",
-      subject: "English",
-      type: "part-time",
-      startDate: "2023-09-01",
-      rate: 120,
-      status: "open",
-      description:
-        "Seeking a part-time English teacher for elementary school students. Responsibilities include teaching grammar, reading comprehension, and writing skills.",
-      requirements: [
-        "Bachelor's degree in English or Education",
-        "Experience working with elementary school students",
-        "Strong communication skills",
-      ],
-      postedDate: "2023-06-05",
-    },
-    {
-      id: "vac-003",
-      title: "Science Teacher",
-      schoolId: "sch-003",
-      schoolName: "Riverside College",
-      location: "Liverpool",
-      subject: "Biology",
-      type: "full-time",
-      startDate: "2023-09-01",
-      rate: 160,
-      status: "filled",
-      description:
-        "Biology teacher needed for college-level courses. Will be teaching introductory and advanced biology concepts to students.",
-      requirements: [
-        "Master's degree in Biology or related field",
-        "Previous teaching experience at college level",
-        "Strong laboratory skills",
-      ],
-      postedDate: "2023-05-20",
-    },
-    {
-      id: "vac-004",
-      title: "Special Education Teacher",
-      schoolId: "sch-004",
-      schoolName: "Sunshine Special School",
-      location: "Leeds",
-      subject: "Special Education",
-      type: "full-time",
-      startDate: "2023-09-01",
-      rate: 170,
-      status: "open",
-      description:
-        "Special education teacher needed to work with students with various learning disabilities. Will develop and implement individualized education plans.",
-      requirements: [
-        "Degree in Special Education",
-        "Experience working with special needs students",
-        "Patience and adaptability",
-      ],
-      postedDate: "2023-06-10",
-    },
-    {
-      id: "vac-005",
-      title: "Substitute Teacher",
-      schoolId: "sch-005",
-      schoolName: "Northside Academy",
-      location: "Newcastle",
-      subject: "Various",
-      type: "temporary",
-      startDate: "2023-09-01",
-      endDate: "2023-12-20",
-      rate: 110,
-      status: "closed",
-      description:
-        "Substitute teacher needed for various subjects. Will fill in for absent teachers as needed throughout the school year.",
-      requirements: [
-        "Bachelor's degree",
-        "Flexibility and adaptability",
-        "Experience with classroom management",
-      ],
-      postedDate: "2023-05-15",
-    },
-  ];
+  useEffect(() => {
+    extrasService.getVacancies().then((rows) => {
+      setVacancies(rows);
+      const unique = new Map<string, { id: string; name: string }>();
+      for (const row of rows) unique.set(row.schoolId, { id: row.schoolId, name: row.schoolName });
+      setSchools([...unique.values()]);
+    });
+  }, []);
 
   // Filter vacancies based on search term and filters
   const filteredVacancies = vacancies.filter((vacancy) => {

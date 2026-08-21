@@ -1,0 +1,38 @@
+export const SCHOOL_NAME_PARTS = {
+  saints: ["Mary", "Anne", "Joseph", "Peter", "Catherine", "Thomas", "Michael", "Luke"],
+  places: [
+    "Oakridge",
+    "Greenfield",
+    "Westfield",
+    "Meadowbank",
+    "Riverside",
+    "Harbour View",
+    "Pebble Brook",
+    "Silver Birch",
+    "Northbridge",
+    "Meridian",
+    "Ashgrove",
+    "Cedar Park",
+    "Foxhollow",
+    "Kingsmead",
+    "Larkspur",
+    "Maple Cross",
+    "Neston",
+    "Orchard",
+    "Parkside",
+    "Quayside",
+    "Redwood",
+    "Southbank",
+    "Thornfield",
+    "Uplands",
+  ],
+} as const;
+
+export const MATS: { id: string; name: string }[] = [
+  { id: "mat-keep", name: "Keep Academy Trust" },
+  { id: "mat-meridian", name: "Meridian Learning Trust" },
+  { id: "mat-northbridge", name: "Northbridge Education Trust" },
+  { id: "mat-silverbirch", name: "Silver Birch Academies" },
+  { id: "mat-harbour", name: "Harbour Lights Trust" },
+  { id: "mat-vale", name: "Vale Collaborative" },
+];

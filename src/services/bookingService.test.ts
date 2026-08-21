@@ -5,6 +5,7 @@ const { from } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/supabase", () => ({
+  isSupabaseConfigured: true,
   supabase: {
     from,
   },

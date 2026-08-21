@@ -1,4 +1,5 @@
 import { School } from "@/types/awr";
+import { getDataset } from "@/mocks";
 
 /**
  * Service for handling AWR-related school functionality
@@ -45,13 +46,19 @@ export class AWRSchoolService {
     try {
       // In a real app, this would fetch from an API or database based on teacher assignments
       // For now, we'll return mock data
-      const schools = this.getMockSchools();
-      
-      // Simulate filtering schools by teacher ID
-      // In a real app, this would be based on actual teacher assignments
-      const filteredSchools = schools.filter((_, index) => index % 2 === 0);
-      
-      return Promise.resolve(filteredSchools);
+      const dataset = getDataset();
+      return dataset.schools
+        .filter((school) =>
+          dataset.bookings.some(
+            (booking) => booking.teacherId === teacherId && booking.schoolId === school.id,
+          ),
+        )
+        .map((school) => ({
+          id: school.id,
+          name: school.name,
+          contactName: school.contactName,
+          contactEmail: school.contactEmail,
+        }));
     } catch (error) {
       console.error(`Error fetching schools for teacher ${teacherId}:`, error);
       throw new Error(`Failed to fetch schools for teacher ${teacherId}`);
@@ -78,37 +85,11 @@ export class AWRSchoolService {
    * @returns Array of mock schools
    */
   private static getMockSchools(): School[] {
-    return [
-      {
-        id: "s1",
-        name: "Oakridge Secondary School",
-        contactName: "Principal Johnson",
-        contactEmail: "principal@oakridge.edu"
-      },
-      {
-        id: "s2",
-        name: "Westfield Academy",
-        contactName: "Dr. Sarah Williams",
-        contactEmail: "swilliams@westfield.edu"
-      },
-      {
-        id: "s3",
-        name: "Northside Science Academy",
-        contactName: "Mark Thompson",
-        contactEmail: "mthompson@northsidescience.edu"
-      },
-      {
-        id: "s4",
-        name: "Creative Arts School",
-        contactName: "Lisa Chen",
-        contactEmail: "lchen@creativearts.edu"
-      },
-      {
-        id: "s5",
-        name: "Riverside Elementary",
-        contactName: "Robert Davis",
-        contactEmail: "rdavis@riverside.edu"
-      }
-    ];
+    return getDataset().schools.map((school) => ({
+      id: school.id,
+      name: school.name,
+      contactName: school.contactName,
+      contactEmail: school.contactEmail,
+    }));
   }
 } 

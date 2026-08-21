@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,19 @@ import {
   Printer,
   Share2,
 } from "lucide-react";
+import { extrasService, formatGbpCompact, type OpsSnapshot } from "@/services/extrasService";
 
 const Management = () => {
+  const [snapshot, setSnapshot] = useState<OpsSnapshot | null>(null);
+
+  useEffect(() => {
+    extrasService.getOpsSnapshot().then(setSnapshot);
+  }, []);
+
+  const revenue = snapshot ? formatGbpCompact(snapshot.chargeTotal) : "—";
+  const teachers = snapshot ? String(snapshot.activeTeacherCount) : "—";
+  const schools = snapshot ? String(snapshot.schoolCount) : "—";
+  const bookings = snapshot ? String(snapshot.bookingsThisMonth) : "—";
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
       <Tabs defaultValue="overview" className="w-full">
@@ -37,7 +48,7 @@ const Management = () => {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl font-bold">£1.2M</p>
+                    <p className="text-3xl font-bold">{revenue}</p>
                     <p className="text-xs text-gray-500">Year to date</p>
                   </div>
                   <div className="p-3 bg-green-50 rounded-full">
@@ -61,7 +72,7 @@ const Management = () => {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl font-bold">248</p>
+                    <p className="text-3xl font-bold">{teachers}</p>
                     <p className="text-xs text-gray-500">Currently employed</p>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-full">
@@ -85,7 +96,7 @@ const Management = () => {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl font-bold">52</p>
+                    <p className="text-3xl font-bold">{schools}</p>
                     <p className="text-xs text-gray-500">Active partnerships</p>
                   </div>
                   <div className="p-3 bg-purple-50 rounded-full">
@@ -109,7 +120,7 @@ const Management = () => {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl font-bold">124</p>
+                    <p className="text-3xl font-bold">{bookings}</p>
                     <p className="text-xs text-gray-500">Total bookings</p>
                   </div>
                   <div className="p-3 bg-amber-50 rounded-full">

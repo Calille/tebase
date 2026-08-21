@@ -2,7 +2,7 @@ import {
   demoCreateResult,
   type CreateResult,
 } from "@/lib/persistence";
-import { listPayWeeks, payWeekContaining, parseIsoDate } from "@/lib/payWeek";
+import { payWeekContaining, parseIsoDate } from "@/lib/payWeek";
 import {
   emptyGroupSummary,
   summariseGroup,
@@ -23,7 +23,7 @@ import {
   validateMainpayLines,
   type MainpayCsvRow,
 } from "./mainpayFormat";
-import { buildLinesForWeek } from "./mockData";
+import { getDataset, resetDataset } from "@/mocks";
 
 const EXPORT_STORAGE_KEY = "tebase.payroll.mainpayExports";
 
@@ -62,9 +62,10 @@ function writeStoredExports(records: MainpayExportRecord[]) {
 
 function seedIfNeeded(now = new Date()) {
   if (seeded) return;
-  weeks = listPayWeeks(now, 12);
+  const dataset = getDataset();
+  weeks = dataset.weeks.slice(0, 12);
   linesByPeriod = new Map(
-    weeks.map((week, index) => [week.id, buildLinesForWeek(week, index)]),
+    weeks.map((week) => [week.id, (dataset.payrollByPeriod[week.id] ?? []).map((line) => ({ ...line }))]),
   );
 
   const stored = readStoredExports();
@@ -85,7 +86,9 @@ function seedIfNeeded(now = new Date()) {
           periodId: previous.id,
           weekEnding: previous.weekEnding,
           rowCount: umbrellaCount,
-          exportedBy: { id: "cons-alex", name: "Alex Patel" },
+          exportedBy: dataset.consultants[0]
+            ? { id: dataset.consultants[0].id, name: dataset.consultants[0].name }
+            : { id: "cons-alex", name: "Alex Patel" },
         },
       ];
       writeStoredExports(exportsStore);
@@ -269,6 +272,7 @@ export const payrollService = {
 
 /** Test-only: rebuild mock weeks/lines and clear recorded exports. */
 export function resetPayrollStoreForTests(now = new Date()) {
+  resetDataset({ now });
   seeded = false;
   linesByPeriod = new Map();
   weeks = [];

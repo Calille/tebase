@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetSettingsStoreForTests } from "@/services/settings/settingsService";
 import { resetTimesheetStoreForTests } from "@/services/timesheets/timesheetService";
+import { resetPayrollStoreForTests } from "@/services/payroll/payrollService";
 import { timesheetService } from "@/services/timesheets/timesheetService";
 import {
   groupLowMarginBySchool,
@@ -11,6 +12,7 @@ import { DEFAULT_MARGIN_THRESHOLDS } from "@/types/settings";
 import type { LowMarginBooking } from "@/types/weeklyReport";
 
 const PERIOD = "2026-08-23";
+const NOW = new Date(2026, 7, 21, 12);
 
 function booking(
   overrides: Partial<LowMarginBooking> & Pick<LowMarginBooking, "id" | "school">,
@@ -98,7 +100,8 @@ describe("low margin grouping", () => {
 describe("weeklyReportService", () => {
   beforeEach(() => {
     resetSettingsStoreForTests();
-    resetTimesheetStoreForTests();
+    resetTimesheetStoreForTests(NOW);
+    resetPayrollStoreForTests(NOW);
   });
 
   it("loads a team report with seasonal comparisons and 8-week trend", async () => {
@@ -142,7 +145,7 @@ describe("weeklyReportService", () => {
 
 describe("timesheetService unapproved summary", () => {
   beforeEach(() => {
-    resetTimesheetStoreForTests();
+    resetTimesheetStoreForTests(NOW);
   });
 
   it("excludes approved sheets from the uninvoiceable total", async () => {

@@ -1,18 +1,43 @@
 import type { PartyRef } from "@/types/party";
+import { getDataset } from "@/mocks";
 
-export const CONSULTANTS: PartyRef[] = [
-  { id: "cons-alex", name: "Alex Patel" },
-  { id: "cons-jordan", name: "Jordan Blake" },
-  { id: "cons-sam", name: "Sam Reed" },
-];
+function consultants(): PartyRef[] {
+  return getDataset()
+    .consultants.filter((item) => item.role === "consultant")
+    .map((item) => ({ id: item.id, name: item.name }));
+}
+
+export const CONSULTANTS: PartyRef[] = new Proxy([] as PartyRef[], {
+  get(_target, prop, receiver) {
+    return Reflect.get(consultants(), prop, receiver);
+  },
+});
 
 export const SCHOOLS = {
-  westfield: { id: "sch-westfield", name: "Westfield Primary" },
-  stmarys: { id: "sch-stmarys", name: "St Mary's Secondary" },
-  oakridge: { id: "sch-oakridge", name: "Oakridge Academy" },
-  greenfield: { id: "sch-greenfield", name: "Greenfield Infants" },
-  harbour: { id: "sch-harbour", name: "Harbour View High" },
-  meadowbank: { id: "sch-meadowbank", name: "Meadowbank Primary" },
+  get westfield() {
+    const school = getDataset().schools.find((item) => item.id === "sch-westfield");
+    return { id: "sch-westfield", name: school?.name ?? "Westfield Primary" };
+  },
+  get stmarys() {
+    const school = getDataset().schools.find((item) => item.id === "sch-stmarys");
+    return { id: "sch-stmarys", name: school?.name ?? "St Mary's Secondary" };
+  },
+  get oakridge() {
+    const school = getDataset().schools.find((item) => item.id === "sch-oakridge");
+    return { id: "sch-oakridge", name: school?.name ?? "Oakridge Academy" };
+  },
+  get greenfield() {
+    const school = getDataset().schools.find((item) => item.id === "sch-greenfield");
+    return { id: "sch-greenfield", name: school?.name ?? "Greenfield Infants" };
+  },
+  get harbour() {
+    const school = getDataset().schools.find((item) => item.id === "sch-harbour");
+    return { id: "sch-harbour", name: school?.name ?? "Harbour View High" };
+  },
+  get meadowbank() {
+    const school = getDataset().schools.find((item) => item.id === "sch-meadowbank");
+    return { id: "sch-meadowbank", name: school?.name ?? "Meadowbank Primary" };
+  },
 } as const;
 
 export const TEACHERS = {
@@ -29,10 +54,14 @@ export const TEACHERS = {
 } as const;
 
 export function consultantById(id: string): PartyRef | undefined {
-  return CONSULTANTS.find((item) => item.id === id);
+  return getDataset()
+    .consultants.map((item) => ({ id: item.id, name: item.name }))
+    .find((item) => item.id === id);
 }
 
 export function consultantByName(name: string): PartyRef | undefined {
   const needle = name.trim().toLowerCase();
-  return CONSULTANTS.find((item) => item.name.toLowerCase() === needle);
+  return getDataset()
+    .consultants.map((item) => ({ id: item.id, name: item.name }))
+    .find((item) => item.name.toLowerCase() === needle);
 }

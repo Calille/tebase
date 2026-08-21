@@ -1,3 +1,4 @@
+import { getDataset } from "@/mocks";
 import { EmailTemplate, EmailResult } from "@/types/awr";
 
 /**
@@ -86,29 +87,17 @@ export class EmailService {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Return mock email history
-      return [
-        {
-          to: "principal@oakridge.edu",
-          subject: "AWR Notification: John Smith",
-          timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          success: true,
-          messageId: "email-123456789",
-        },
-        {
-          to: "swilliams@westfield.edu",
-          subject: "AWR Notification: Sarah Johnson",
-          timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          success: true,
-          messageId: "email-987654321",
-        },
-        {
-          to: "mthompson@northsidescience.edu",
-          subject: "AWR Notification: Michael Chen",
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          success: false,
-        },
-      ];
+      const dataset = getDataset();
+      const awr = dataset.awrTeachers.slice(0, 3);
+      return awr.map((teacher, index) => ({
+        to: teacher.currentSchool
+          ? `office@${teacher.currentSchoolId ?? "school"}.example`
+          : "office@school.example",
+        subject: `AWR Notification: ${teacher.name}`,
+        timestamp: new Date(dataset.config.now.getTime() - (index + 1) * 86400000).toISOString(),
+        success: index !== 2,
+        messageId: index === 2 ? undefined : `email-awr-${teacher.id}`,
+      }));
     } catch (error) {
       console.error("Error fetching email history:", error);
       throw new Error("Failed to fetch email history");

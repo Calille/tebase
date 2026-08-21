@@ -22,14 +22,15 @@ import {
 import { settingsService } from "@/services/settings/settingsService";
 import { timesheetPortalService } from "@/services/timesheets/timesheetPortalService";
 import type { PortalSendMode, PortalSendResult } from "@/services/timesheets/timesheetPortalService";
-import { buildMockTimesheets, daysSinceSent } from "@/services/timesheets/mockTimesheets";
+import { daysSinceSent } from "@/services/timesheets/mockTimesheets";
+import { getDataset, resetDataset } from "@/mocks";
 
 let sheets: Timesheet[] = [];
 let seeded = false;
 
 function seedIfNeeded() {
   if (seeded) return;
-  sheets = buildMockTimesheets();
+  sheets = getDataset().timesheets.map(clone);
   seeded = true;
 }
 
@@ -467,8 +468,8 @@ export const timesheetService = {
 };
 
 export function resetTimesheetStoreForTests(now = new Date()) {
+  resetDataset({ now });
   seeded = false;
   sheets = [];
-  sheets = buildMockTimesheets(now);
-  seeded = true;
+  seedIfNeeded();
 }

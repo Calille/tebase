@@ -20,6 +20,7 @@ import {
   type MarginThresholdSettings,
   type TimesheetChaseSettings,
 } from "@/types/settings";
+import DevDatasetPanel from "./DevDatasetPanel";
 
 const Settings = () => {
   const { user, updateProfile } = useAuth();
@@ -277,6 +278,9 @@ const Settings = () => {
   return (
     <div className="container mx-auto py-6 max-w-5xl">
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
+      <div className="mb-6">
+        <DevDatasetPanel />
+      </div>
 
       <Tabs defaultValue="account" className="space-y-4">
         <TabsList className="grid w-full grid-cols-5">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toastDemoAction } from "@/lib/persistence";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { extrasService } from "@/services/extrasService";
 
 interface Complaint {
   id: string;
@@ -75,80 +76,31 @@ const Complaints = () => {
     severity: "medium",
   });
 
-  // Sample complaints data
-  const complaints: Complaint[] = [
-    {
-      id: "comp-001",
-      title: "Teacher Late Arrival",
-      description:
-        "John Smith was 30 minutes late for his class at Westfield High School.",
-      type: "teacher",
-      severity: "medium",
-      status: "new",
-      submittedBy: "Jane Wilson (School Admin)",
-      submittedDate: "2023-06-15 09:30",
-    },
-    {
-      id: "comp-002",
-      title: "Unprofessional Conduct",
-      description:
-        "Teacher Sarah Johnson displayed unprofessional behavior during class.",
-      type: "teacher",
-      severity: "high",
-      status: "in-progress",
-      submittedBy: "Robert Brown (Principal)",
-      submittedDate: "2023-06-14 14:45",
-      assignedTo: "HR Department",
-    },
-    {
-      id: "comp-003",
-      title: "Booking System Error",
-      description:
-        "Unable to book teachers through the system for the past 2 days.",
-      type: "system",
-      severity: "high",
-      status: "in-progress",
-      submittedBy: "Emily Davis (Admin)",
-      submittedDate: "2023-06-13 11:20",
-      assignedTo: "IT Support",
-    },
-    {
-      id: "comp-004",
-      title: "Poor Facilities",
-      description:
-        "Classroom at Oakridge Elementary lacks proper heating and ventilation.",
-      type: "school",
-      severity: "medium",
-      status: "new",
-      submittedBy: "Michael Chen (Teacher)",
-      submittedDate: "2023-06-12 16:10",
-    },
-    {
-      id: "comp-005",
-      title: "Payment Delay",
-      description: "Teacher has not received payment for May assignments.",
-      type: "other",
-      severity: "medium",
-      status: "resolved",
-      submittedBy: "David Wilson (Teacher)",
-      submittedDate: "2023-06-10 08:15",
-      resolvedDate: "2023-06-15 14:30",
-      assignedTo: "Finance Department",
-    },
-    {
-      id: "comp-006",
-      title: "Inappropriate Teaching Material",
-      description:
-        "Teacher used inappropriate teaching materials for primary school students.",
-      type: "teacher",
-      severity: "high",
-      status: "closed",
-      submittedBy: "Amanda Lee (Parent)",
-      submittedDate: "2023-06-05 13:40",
-      resolvedDate: "2023-06-08 15:20",
-      assignedTo: "Education Standards Team",
-    },
-  ];
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+
+  useEffect(() => {
+    extrasService.getComplaints().then((rows) => {
+      setComplaints(
+        rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          type: row.teacherId ? "teacher" : "school",
+          severity: row.priority,
+          status:
+            row.status === "open"
+              ? "new"
+              : row.status === "investigating"
+                ? "in-progress"
+                : row.status === "resolved"
+                  ? "resolved"
+                  : "closed",
+          submittedBy: row.schoolName,
+          submittedDate: row.date,
+        })),
+      );
+    });
+  }, []);
 
   // Filter complaints based on search term, status, and severity filters
   const filteredComplaints = complaints.filter((complaint) => {
