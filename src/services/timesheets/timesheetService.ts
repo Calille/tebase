@@ -438,19 +438,19 @@ export const timesheetService = {
     return sheets
       .filter((sheet) => {
         if (sheet.status !== "approved") return false;
-        if (sheet.invoiced || sheet.invoiceId) return false;
+        if (sheet.invoiced || sheet.xeroInvoiceId) return false;
         if (periodId && sheet.periodId !== periodId) return false;
         return true;
       })
       .map(clone);
   },
 
-  async markInvoiced(ids: string[], invoiceId: string): Promise<WriteResult> {
+  async markInvoiced(ids: string[], xeroInvoiceId: string): Promise<WriteResult> {
     seedIfNeeded();
     for (const id of ids) {
       const current = sheets.find((sheet) => sheet.id === id);
       if (!current) continue;
-      replaceSheet({ ...current, invoiced: true, invoiceId });
+      replaceSheet({ ...current, invoiced: true, xeroInvoiceId });
     }
     return demoWriteResult();
   },
@@ -460,7 +460,7 @@ export const timesheetService = {
     for (const id of ids) {
       const current = sheets.find((sheet) => sheet.id === id);
       if (!current) continue;
-      replaceSheet({ ...current, invoiced: false, invoiceId: null });
+      replaceSheet({ ...current, invoiced: false, xeroInvoiceId: null });
     }
     return demoWriteResult();
   },

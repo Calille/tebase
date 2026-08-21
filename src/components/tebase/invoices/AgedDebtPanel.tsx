@@ -1,26 +1,5 @@
-import { useState } from "react";
-import { format, parseISO } from "date-fns";
-import { enGB } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -29,57 +8,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { toastWriteResult } from "@/lib/persistence";
 import { formatGbp } from "@/types/payroll";
-import {
-  CHASE_METHOD_LABELS,
-  INVOICE_STATUS_LABELS,
-  type AgedDebtSummary,
-  type ChaseMethod,
-  type Invoice,
-} from "@/types/invoice";
-import type { PartyRef } from "@/types/party";
-import { invoiceService, outstandingAmount } from "@/services/invoices/invoiceService";
+import type { XeroAgedDebtSummary } from "@/types/xero";
+import { format, parseISO } from "date-fns";
+import { enGB } from "date-fns/locale";
 
-interface AgedDebtPanelProps {
-  summary: AgedDebtSummary | null;
-  actor: PartyRef | null;
-  onChanged: () => void;
-}
-
-const AgedDebtPanel = ({ summary, actor, onChanged }: AgedDebtPanelProps) => {
-  const [chaseFor, setChaseFor] = useState<Invoice | null>(null);
-  const [method, setMethod] = useState<ChaseMethod>("email");
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const handleChase = async () => {
-    if (!chaseFor || !actor) return;
-    setBusy(true);
-    try {
-      const result = await invoiceService.recordChase({
-        invoiceId: chaseFor.id,
-        method,
-        actor,
-        note: note.trim() || undefined,
-      });
-      toastWriteResult("Chase recorded", result);
-      if (result.ok) {
-        setChaseFor(null);
-        setNote("");
-        onChanged();
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
+const AgedDebtPanel = ({ summary }: { summary: XeroAgedDebtSummary | null }) => {
   if (!summary) {
     return <p className="text-sm text-gray-500">Loading aged debt…</p>;
   }
 
   return (
     <div className="space-y-4">
+      {summary.source === "unavailable" ? (
+        <p className="text-sm text-gray-600">
+          Aged debt is sourced from Xero, not from a local invoice store. Connect
+          Xero and enable status sync to fill these buckets.
+        </p>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card className="bg-white">
           <CardHeader className="pb-2">
@@ -137,30 +84,36 @@ const AgedDebtPanel = ({ summary, actor, onChanged }: AgedDebtPanelProps) => {
                 <TableHead className="text-right">Invoices</TableHead>
                 <TableHead className="text-right">Outstanding</TableHead>
                 <TableHead className="text-right">Overdue</TableHead>
-                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {summary.byBillTo.map((row) => (
-                <TableRow key={row.billTo.id}>
-                  <TableCell className="font-medium">
-                    {row.billTo.name}
-                    {row.habituallyLate ? (
-                      <Badge className="ml-2 bg-red-100 text-red-800">
-                        Habitually late
-                      </Badge>
-                    ) : null}
+              {summary.byBillTo.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="py-6 text-center text-gray-500">
+                    No Xero outstanding balances yet.
                   </TableCell>
-                  <TableCell className="text-right">{row.invoiceCount}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatGbp(row.outstanding)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatGbp(row.overdue)}
-                  </TableCell>
-                  <TableCell />
                 </TableRow>
-              ))}
+              ) : (
+                summary.byBillTo.map((row) => (
+                  <TableRow key={row.billTo.id}>
+                    <TableCell className="font-medium">
+                      {row.billTo.name}
+                      {row.habituallyLate ? (
+                        <Badge className="ml-2 bg-red-100 text-red-800">
+                          Habitually late
+                        </Badge>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-right">{row.invoiceCount}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatGbp(row.outstanding)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatGbp(row.overdue)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -168,7 +121,7 @@ const AgedDebtPanel = ({ summary, actor, onChanged }: AgedDebtPanelProps) => {
 
       <Card className="bg-white">
         <CardHeader>
-          <CardTitle className="text-base">Open invoices</CardTitle>
+          <CardTitle className="text-base">Open in Xero</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -178,21 +131,35 @@ const AgedDebtPanel = ({ summary, actor, onChanged }: AgedDebtPanelProps) => {
                 <TableHead>Bill to</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Due</TableHead>
-                <TableHead className="text-right">Outstanding</TableHead>
-                <TableHead>Last chase</TableHead>
-                <TableHead />
+                <TableHead className="text-right">Amount due</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {summary.invoices.map((invoice) => {
-                const lastChase = invoice.chases[invoice.chases.length - 1];
-                return (
-                  <TableRow key={invoice.id}>
+              {summary.invoices.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-6 text-center text-gray-500">
+                    No Xero invoices synced.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                summary.invoices.map((invoice) => (
+                  <TableRow key={invoice.xeroInvoiceId}>
                     <TableCell className="font-medium">
-                      {invoice.number}
+                      {invoice.xeroDeepLink ? (
+                        <a
+                          href={invoice.xeroDeepLink}
+                          className="underline"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {invoice.xeroInvoiceNumber ?? invoice.xeroInvoiceId}
+                        </a>
+                      ) : (
+                        invoice.xeroInvoiceNumber ?? invoice.xeroInvoiceId
+                      )}
                     </TableCell>
                     <TableCell>{invoice.billTo.name}</TableCell>
-                    <TableCell>{INVOICE_STATUS_LABELS[invoice.status]}</TableCell>
+                    <TableCell>{invoice.status}</TableCell>
                     <TableCell className="text-xs">
                       {invoice.dueDate
                         ? format(parseISO(invoice.dueDate), "d MMM yyyy", {
@@ -201,85 +168,15 @@ const AgedDebtPanel = ({ summary, actor, onChanged }: AgedDebtPanelProps) => {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatGbp(outstandingAmount(invoice))}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {lastChase
-                        ? `${format(parseISO(lastChase.at), "d MMM", { locale: enGB })} · ${CHASE_METHOD_LABELS[lastChase.method]} · ${lastChase.actor.name}`
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!actor}
-                        onClick={() => setChaseFor(invoice)}
-                      >
-                        Record chase
-                      </Button>
+                      {formatGbp(invoice.amountDue)}
                     </TableCell>
                   </TableRow>
-                );
-              })}
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
-
-      <Dialog
-        open={Boolean(chaseFor)}
-        onOpenChange={(open) => {
-          if (!open) setChaseFor(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Record chase · {chaseFor?.number}</DialogTitle>
-            <DialogDescription>
-              Records that a chase happened. Email is not sent from this screen.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Method</Label>
-              <Select
-                value={method}
-                onValueChange={(value) => setMethod(value as ChaseMethod)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(CHASE_METHOD_LABELS) as ChaseMethod[]).map(
-                    (item) => (
-                      <SelectItem key={item} value={item}>
-                        {CHASE_METHOD_LABELS[item]}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="chase-note">Note</Label>
-              <Textarea
-                id="chase-note"
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="Who you spoke to, what they said"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setChaseFor(null)}>
-              Cancel
-            </Button>
-            <Button disabled={busy || !actor} onClick={handleChase}>
-              Save chase
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

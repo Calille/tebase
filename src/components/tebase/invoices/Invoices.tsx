@@ -1,105 +1,108 @@
 import { useCallback, useEffect, useState } from "react";
-import { Download } from "lucide-react";
 import DemoBanner from "@/components/tebase/shared/DemoBanner";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/contexts/AuthContext";
-import {
-  invoiceService,
-} from "@/services/invoices/invoiceService";
-import type { AgedDebtSummary, Invoice } from "@/types/invoice";
+import { xeroService } from "@/services/invoices/xeroService";
+import type { BillTo } from "@/types/billing";
+import type {
+  XeroAgedDebtSummary,
+  XeroConnectionHealth,
+  XeroPushRecord,
+} from "@/types/xero";
 import type { PayWeek } from "@/types/payroll";
-import InvoiceBuilder from "./InvoiceBuilder";
-import InvoiceRegister from "./InvoiceRegister";
+import ReadyToInvoiceQueue from "./ReadyToInvoiceQueue";
+import SentToXero from "./SentToXero";
 import AgedDebtPanel from "./AgedDebtPanel";
-import XeroExportDialog from "./XeroExportDialog";
+import XeroConnectionPanel from "./XeroConnectionPanel";
 
 const Invoices = () => {
-  const { user } = useAuth();
-  const actor = user
-    ? { id: user.id, name: user.name || user.username || user.email }
-    : null;
-  const [tab, setTab] = useState("builder");
+  const [tab, setTab] = useState("queue");
   const [weeks, setWeeks] = useState<PayWeek[]>([]);
   const [periodId, setPeriodId] = useState("");
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [aged, setAged] = useState<AgedDebtSummary | null>(null);
-  const [xeroOpen, setXeroOpen] = useState(false);
+  const [health, setHealth] = useState<XeroConnectionHealth | null>(null);
+  const [aged, setAged] = useState<XeroAgedDebtSummary | null>(null);
+  const [pushes, setPushes] = useState<XeroPushRecord[]>([]);
+  const [billTos, setBillTos] = useState<BillTo[]>([]);
 
-  const load = useCallback(async () => {
-    const [list, debt] = await Promise.all([
-      invoiceService.listInvoices(),
-      invoiceService.getAgedDebt(),
-    ]);
-    setInvoices(list);
-    setAged(debt);
+  const loadHealth = useCallback(async () => {
+    const next = await xeroService.getConnectionHealth();
+    setHealth(next);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      invoiceService.getPayWeeks(),
-      invoiceService.getCurrentPayWeek(),
-    ]).then(([list, current]) => {
+      xeroService.getPayWeeks(),
+      xeroService.getCurrentPayWeek(),
+      xeroService.getAgedDebt(),
+      xeroService.listPushes(),
+      xeroService.listBillTos(),
+      xeroService.getConnectionHealth(),
+    ]).then(([list, current, debt, records, tos, connection]) => {
       if (cancelled) return;
       setWeeks(list);
       setPeriodId(current.id);
+      setAged(debt);
+      setPushes(records);
+      setBillTos(tos);
+      setHealth(connection);
     });
-    load();
     return () => {
       cancelled = true;
     };
-  }, [load]);
+  }, []);
 
   return (
     <div className="space-y-4">
-      <DemoBanner message="Invoices are built only from approved timesheets. Sample bill-tos and rates stay in this session — nothing is written to the database. Print uses the browser dialog; there is no generated PDF file." />
+      <DemoBanner message="Xero owns invoices, VAT and payment. Tebase prepares approved timesheets and pushes drafts. Tokens and the Xero API stay on Edge Functions — never in this browser." />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-gray-600">
-          Pipeline: approved timesheet → ready to invoice → issued (numbered,
-          immutable). Corrections are credit notes.
-        </p>
-        <Button
-          variant="outline"
-          disabled={!periodId}
-          onClick={() => setXeroOpen(true)}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Xero CSV
-        </Button>
-      </div>
+      <p className="text-sm text-gray-600">
+        Pipeline: approved timesheet → ready to invoice → Xero draft. Corrections
+        after a push are flagged here and finished in Xero; Tebase does not
+        issue credit notes.
+      </p>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="builder">Builder</TabsTrigger>
-          <TabsTrigger value="register">Issued</TabsTrigger>
+          <TabsTrigger value="queue">Ready to invoice</TabsTrigger>
+          <TabsTrigger value="sent">Sent to Xero</TabsTrigger>
           <TabsTrigger value="aged">Aged debt</TabsTrigger>
+          <TabsTrigger value="connection">Xero connection</TabsTrigger>
         </TabsList>
-        <TabsContent value="builder">
-          <InvoiceBuilder
+        <TabsContent value="queue">
+          <ReadyToInvoiceQueue
             weeks={weeks}
             periodId={periodId}
             onPeriodChange={setPeriodId}
-            actor={actor}
-            onIssued={load}
+            connection={
+              health ?? {
+                status: "disconnected",
+                tenantName: null,
+                tenantId: null,
+                accessTokenExpiresAt: null,
+                refreshTokenExpiresAt: null,
+                lastError: null,
+              }
+            }
           />
         </TabsContent>
-        <TabsContent value="register">
-          <InvoiceRegister invoices={invoices} actor={actor} onChanged={load} />
+        <TabsContent value="sent">
+          <SentToXero records={pushes} />
         </TabsContent>
         <TabsContent value="aged">
-          <AgedDebtPanel summary={aged} actor={actor} onChanged={load} />
+          <AgedDebtPanel summary={aged} />
+        </TabsContent>
+        <TabsContent value="connection">
+          {health ? (
+            <XeroConnectionPanel
+              health={health}
+              billTos={billTos}
+              onRefresh={loadHealth}
+            />
+          ) : (
+            <p className="text-sm text-gray-500">Checking connection…</p>
+          )}
         </TabsContent>
       </Tabs>
-
-      <XeroExportDialog
-        open={xeroOpen}
-        onOpenChange={setXeroOpen}
-        periodId={periodId}
-        exportedBy={actor}
-        onExported={load}
-      />
     </div>
   );
 };

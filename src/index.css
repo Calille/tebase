@@ -81,11 +81,4 @@
   .no-print {
     display: none !important;
   }
-
-  #invoice-print,
-  .invoice-print-root {
-    box-shadow: none;
-    max-width: none;
-    padding: 0;
-  }
 }

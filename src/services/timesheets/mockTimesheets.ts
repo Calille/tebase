@@ -71,7 +71,7 @@ function makeSheet(input: {
   rateSchedule?: RatePeriod[];
   role?: TeacherRole;
   invoiced?: boolean;
-  invoiceId?: string | null;
+  xeroInvoiceId?: string | null;
 }): Timesheet {
   const expectedHours = hoursFromDays(input.days);
   const confirmedDays = input.confirmedDays ?? null;
@@ -118,7 +118,7 @@ function makeSheet(input: {
     workedDays,
     rateSchedule,
     invoiced: input.invoiced ?? false,
-    invoiceId: input.invoiceId ?? null,
+    xeroInvoiceId: input.xeroInvoiceId ?? null,
   };
 }
 
@@ -510,7 +510,7 @@ export function buildMockTimesheets(now = new Date()): Timesheet[] {
       approverName: "Neil Cartwright",
       confirmedDays: 4,
       invoiced: true,
-      invoiceId: "inv-seed-old",
+      xeroInvoiceId: "xero-inv-demo-old",
       history: [
         transition("h22", "draft", "sent", subDays(now, 18).toISOString(), SYSTEM),
         transition(

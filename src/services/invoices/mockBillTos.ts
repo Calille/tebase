@@ -22,6 +22,7 @@ export const BILL_TOS: BillTo[] = [
       city: "Birmingham",
       postcode: "B12 4AA",
     },
+    xeroContactId: null,
   },
   {
     id: "bt-westfield",
@@ -42,6 +43,7 @@ export const BILL_TOS: BillTo[] = [
       city: "Birmingham",
       postcode: "B13 8BB",
     },
+    xeroContactId: null,
   },
   {
     id: "bt-stmarys",
@@ -61,6 +63,7 @@ export const BILL_TOS: BillTo[] = [
       city: "Birmingham",
       postcode: "B14 2CC",
     },
+    xeroContactId: null,
   },
   {
     id: "bt-harbour-incomplete",
@@ -73,6 +76,7 @@ export const BILL_TOS: BillTo[] = [
     poRequired: false,
     financeContact: null,
     billingAddress: null,
+    xeroContactId: null,
   },
   {
     id: "bt-county-la",
@@ -93,6 +97,7 @@ export const BILL_TOS: BillTo[] = [
       city: "Birmingham",
       postcode: "B1 2DD",
     },
+    xeroContactId: null,
   },
 ];
 

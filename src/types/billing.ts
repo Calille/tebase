@@ -36,6 +36,11 @@ export interface BillTo {
   poRequired: boolean;
   financeContact: FinanceContact | null;
   billingAddress: PostalAddress | null;
+  /**
+   * Xero Contact this bill-to is linked to. Null until mapped on the
+   * contact-mapping screen. Never auto-created.
+   */
+  xeroContactId: string | null;
 }
 
 export const BILL_TO_KIND_LABELS: Record<BillToKind, string> = {

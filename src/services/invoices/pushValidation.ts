@@ -1,43 +1,46 @@
 import type { BillTo } from "@/types/billing";
-import type {
-  InvoiceLine,
-  InvoiceValidationIssue,
-} from "@/types/invoice";
 import type { Timesheet } from "@/types/timesheet";
+import type { XeroPushLine, XeroPushValidationIssue } from "@/types/xero";
+import { lineCharge } from "@/services/invoices/pushLines";
 
-export function validateInvoiceIssue(input: {
+export function validateXeroPush(input: {
   billTo: BillTo;
   poNumber: string | null | undefined;
-  lines: InvoiceLine[];
+  lines: XeroPushLine[];
   timesheets: Timesheet[];
-}): InvoiceValidationIssue[] {
-  const issues: InvoiceValidationIssue[] = [];
+  connected: boolean;
+}): XeroPushValidationIssue[] {
+  const issues: XeroPushValidationIssue[] = [];
+
+  if (!input.connected) {
+    issues.push({
+      code: "disconnected",
+      message: "Xero is not connected. Re-authorise before pushing.",
+      billToId: input.billTo.id,
+    });
+  }
 
   if (input.lines.length === 0) {
     issues.push({
       code: "no_lines",
-      message: "No lines selected — nothing to invoice.",
+      message: "No lines selected — nothing to push.",
+      billToId: input.billTo.id,
+    });
+  }
+
+  if (!input.billTo.xeroContactId) {
+    issues.push({
+      code: "unmapped_bill_to",
+      message: `${input.billTo.name} is not linked to a Xero contact. Map it before pushing — Tebase will not create contacts silently.`,
+      billToId: input.billTo.id,
     });
   }
 
   if (input.billTo.poRequired && !input.poNumber?.trim()) {
     issues.push({
       code: "missing_po",
-      message: `${input.billTo.name} requires a PO number before issue.`,
-    });
-  }
-
-  if (!input.billTo.billingAddress) {
-    issues.push({
-      code: "missing_billing_address",
-      message: `${input.billTo.name} has no billing address.`,
-    });
-  }
-
-  if (!input.billTo.financeContact) {
-    issues.push({
-      code: "missing_finance_contact",
-      message: `${input.billTo.name} has no finance contact.`,
+      message: `${input.billTo.name} requires a PO number before push. It is sent as the Xero invoice Reference.`,
+      billToId: input.billTo.id,
     });
   }
 
@@ -49,9 +52,10 @@ export function validateInvoiceIssue(input: {
     if (!sheet) {
       issues.push({
         code: "not_approved",
-        message: `Timesheet ${line.timesheetId} was not found — cannot invoice ${line.teacher.name} on ${line.dateWorked}.`,
+        message: `Timesheet ${line.timesheetId} was not found — cannot push ${line.teacher.name} on ${line.dateWorked}.`,
         lineId: line.id,
         timesheetId: line.timesheetId,
+        billToId: input.billTo.id,
       });
       continue;
     }
@@ -62,19 +66,21 @@ export function validateInvoiceIssue(input: {
         message: `${sheet.teacher.name} at ${sheet.school.name} is ${sheet.status}, not approved.`,
         lineId: line.id,
         timesheetId: sheet.id,
+        billToId: input.billTo.id,
       });
     }
 
-    if (sheet.invoiced || sheet.invoiceId) {
+    if (sheet.invoiced || sheet.xeroInvoiceId) {
       issues.push({
         code: "already_invoiced",
-        message: `${sheet.teacher.name} at ${sheet.school.name} is already on invoice ${sheet.invoiceId ?? "(issued)"}.`,
+        message: `${sheet.teacher.name} at ${sheet.school.name} is already on Xero invoice ${sheet.xeroInvoiceId ?? "(pushed)"}.`,
         lineId: line.id,
         timesheetId: sheet.id,
+        billToId: input.billTo.id,
       });
     }
 
-    if (line.chargeRate == null || line.rateProblem) {
+    if (line.unitAmount == null || line.rateProblem) {
       issues.push({
         code: "unresolvable_rate",
         message:
@@ -82,15 +88,7 @@ export function validateInvoiceIssue(input: {
           `No rate for ${line.teacher.name} on ${line.dateWorked}.`,
         lineId: line.id,
         timesheetId: sheet.id,
-      });
-    }
-
-    if (line.vatRate == null) {
-      issues.push({
-        code: "unknown_vat_rate",
-        message: `No VAT rate for service type “${line.serviceType}” on ${line.teacher.name} / ${line.dateWorked}.`,
-        lineId: line.id,
-        timesheetId: sheet.id,
+        billToId: input.billTo.id,
       });
     }
 
@@ -100,15 +98,18 @@ export function validateInvoiceIssue(input: {
         message: `Zero ${line.unitType === "hour" ? "hours" : "days"} for ${line.teacher.name} on ${line.dateWorked}.`,
         lineId: line.id,
         timesheetId: sheet.id,
+        billToId: input.billTo.id,
       });
     }
 
-    if ((line.net ?? 0) <= 0) {
+    const charge = lineCharge(line);
+    if (charge == null || charge <= 0) {
       issues.push({
         code: "zero_value",
         message: `Zero-value line for ${line.teacher.name} on ${line.dateWorked}.`,
         lineId: line.id,
         timesheetId: sheet.id,
+        billToId: input.billTo.id,
       });
     }
   }

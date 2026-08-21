@@ -55,7 +55,7 @@ export function resolveChargeRate(
 }
 
 export function billingStateFor(sheet: Timesheet): TimesheetBillingState {
-  if (sheet.invoiced || sheet.invoiceId) return "invoiced";
+  if (sheet.invoiced || sheet.xeroInvoiceId) return "invoiced";
   if (sheet.status === "approved") return "ready_to_invoice";
   return "not_ready";
 }
@@ -207,9 +207,10 @@ export interface Timesheet {
    */
   workedDays: WorkedDay[];
   rateSchedule: RatePeriod[];
-  /** True once this sheet is on an issued invoice. */
+  /** True once this sheet has been pushed to a Xero invoice. */
   invoiced: boolean;
-  invoiceId: string | null;
+  /** Xero InvoiceID. Null until a push completes. */
+  xeroInvoiceId: string | null;
 }
 
 export interface UnapprovedTimesheetSummary {

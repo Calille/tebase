@@ -138,7 +138,7 @@ const TimesheetDetailDialog = ({
               <p className="text-xs text-gray-500">Invoice</p>
               <p className="font-medium">
                 {sheet.invoiced
-                  ? `On invoice ${sheet.invoiceId}`
+                  ? `On Xero invoice ${sheet.xeroInvoiceId}`
                   : sheet.status === "approved"
                     ? "Ready to invoice"
                     : "Not approved"}
