@@ -135,6 +135,16 @@ const TimesheetDetailDialog = ({
               <p className="font-medium">{formatGbp(sheet.chargeValue)}</p>
             </div>
             <div>
+              <p className="text-xs text-gray-500">Invoice</p>
+              <p className="font-medium">
+                {sheet.invoiced
+                  ? `On invoice ${sheet.invoiceId}`
+                  : sheet.status === "approved"
+                    ? "Ready to invoice"
+                    : "Not approved"}
+              </p>
+            </div>
+            <div>
               <p className="text-xs text-gray-500">Approver</p>
               <p className="font-medium">
                 {sheet.approverName
@@ -143,6 +153,19 @@ const TimesheetDetailDialog = ({
               </p>
             </div>
           </div>
+
+          {sheet.workedDays.length > 0 ? (
+            <div>
+              <p className="text-xs font-medium text-gray-500">Days worked</p>
+              <ul className="mt-1 space-y-1 text-xs">
+                {sheet.workedDays.map((day) => (
+                  <li key={day.date}>
+                    {day.date}: {day.units} {day.unitType === "hour" ? "h" : "d"}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {sheet.holidayOrInset && (
             <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">

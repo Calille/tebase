@@ -1,17 +1,25 @@
-import { differenceInCalendarDays, subDays } from "date-fns";
+import { addDays, differenceInCalendarDays, subDays } from "date-fns";
 import {
   computeChargeTotal,
   type PayrollCostModel,
 } from "@/types/payroll";
 import type { PartyRef } from "@/types/party";
 import type {
+  RatePeriod,
+  TeacherRole,
   Timesheet,
   TimesheetQuery,
   TimesheetStatus,
   TimesheetTransition,
+  WorkedDay,
 } from "@/types/timesheet";
 import { CONSULTANTS, SCHOOLS, TEACHERS } from "@/services/weeklyReport/mockRefs";
-import { listPayWeeks } from "@/lib/payWeek";
+import { listPayWeeks, parseIsoDate, toIsoDate } from "@/lib/payWeek";
+import {
+  chargeFromWorkedDays,
+  defaultRateSchedule,
+  generateWorkedDays,
+} from "@/services/timesheets/workedDays";
 
 const SYSTEM: PartyRef = { id: "system", name: "Tebase" };
 const SCHOOL_USER = (school: PartyRef): PartyRef => ({
@@ -59,12 +67,29 @@ function makeSheet(input: {
   confirmedDays?: number | null;
   query?: TimesheetQuery | null;
   history: TimesheetTransition[];
+  workedDays?: WorkedDay[];
+  rateSchedule?: RatePeriod[];
+  role?: TeacherRole;
+  invoiced?: boolean;
+  invoiceId?: string | null;
 }): Timesheet {
   const expectedHours = hoursFromDays(input.days);
   const confirmedDays = input.confirmedDays ?? null;
   const confirmedHours =
     confirmedDays == null ? null : hoursFromDays(confirmedDays);
+  const role = input.role ?? "supply_teacher";
+  const workedDays =
+    input.workedDays ??
+    generateWorkedDays(input.periodId, confirmedDays ?? input.days, role);
+  const rateSchedule =
+    input.rateSchedule ??
+    defaultRateSchedule(input.periodId, input.cost.chargeRate);
   const units = confirmedDays ?? input.days;
+  const fromDates = chargeFromWorkedDays(
+    workedDays,
+    rateSchedule,
+    input.cost.chargeRate,
+  );
   return {
     id: input.id,
     periodId: input.periodId,
@@ -78,7 +103,7 @@ function makeSheet(input: {
     confirmedHours,
     confirmedDays,
     cost: input.cost,
-    chargeValue: charge(input.cost, units),
+    chargeValue: workedDays.length > 0 ? fromDates : charge(input.cost, units),
     sentAt: input.sentAt ?? null,
     viewedAt: input.viewedAt ?? null,
     approvedAt: input.approvedAt ?? null,
@@ -90,6 +115,10 @@ function makeSheet(input: {
     hasBookings: input.hasBookings ?? true,
     query: input.query ?? null,
     history: input.history,
+    workedDays,
+    rateSchedule,
+    invoiced: input.invoiced ?? false,
+    invoiceId: input.invoiceId ?? null,
   };
 }
 
@@ -98,6 +127,9 @@ export function buildMockTimesheets(now = new Date()): Timesheet[] {
   const currentId = weeks[0]?.id ?? "current";
   const previousId = weeks[1]?.id ?? currentId;
   const olderId = weeks[2]?.id ?? currentId;
+  const currentStarts = weeks[0]?.startsOn ?? currentId;
+  const dayOn = (weekStarts: string, offset: number) =>
+    toIsoDate(addDays(parseIsoDate(weekStarts), offset));
 
   const alex = CONSULTANTS[0];
   const jordan = CONSULTANTS[1];
@@ -217,13 +249,33 @@ export function buildMockTimesheets(now = new Date()): Timesheet[] {
       teacher: TEACHERS.michael,
       school: SCHOOLS.oakridge,
       consultant: jordan,
-      days: 5,
-      cost: { payRate: 170, chargeRate: 230 },
+      days: 4.5,
+      cost: { payRate: 170, chargeRate: 250 },
       sentAt: fridaySend(currentId, 0),
       viewedAt: subDays(now, 0).toISOString(),
       approvedAt: now.toISOString(),
       approverName: "Joanna Hale",
-      confirmedDays: 5,
+      confirmedDays: 4.5,
+      role: "supply_teacher",
+      workedDays: [
+        { date: dayOn(currentStarts, 0), units: 1, unitType: "day", role: "supply_teacher" },
+        { date: dayOn(currentStarts, 1), units: 0.5, unitType: "day", role: "supply_teacher" },
+        { date: dayOn(currentStarts, 2), units: 1, unitType: "day", role: "supply_teacher" },
+        { date: dayOn(currentStarts, 3), units: 1, unitType: "day", role: "supply_teacher" },
+        { date: dayOn(currentStarts, 4), units: 1, unitType: "day", role: "supply_teacher" },
+      ],
+      rateSchedule: [
+        {
+          from: dayOn(currentStarts, 0),
+          to: dayOn(currentStarts, 1),
+          dayRate: 230,
+        },
+        {
+          from: dayOn(currentStarts, 2),
+          to: currentId,
+          dayRate: 250,
+        },
+      ],
       history: [
         transition("h10", null, "draft", subDays(now, 1).toISOString(), SYSTEM),
         transition("h11", "draft", "sent", fridaySend(currentId, 0), SYSTEM),
@@ -241,6 +293,112 @@ export function buildMockTimesheets(now = new Date()): Timesheet[] {
           now.toISOString(),
           SCHOOL_USER(SCHOOLS.oakridge),
           { approverName: "Joanna Hale" },
+        ),
+      ],
+    }),
+    makeSheet({
+      id: "ts-ok-greenfield",
+      periodId: currentId,
+      status: "approved",
+      teacher: TEACHERS.nina,
+      school: SCHOOLS.greenfield,
+      consultant: sam,
+      days: 5,
+      cost: { payRate: 110, chargeRate: 145 },
+      sentAt: fridaySend(currentId, 0),
+      viewedAt: now.toISOString(),
+      approvedAt: now.toISOString(),
+      approverName: "Patrice Bell",
+      confirmedDays: 5,
+      role: "teaching_assistant",
+      history: [
+        transition("h-nina-1", null, "draft", subDays(now, 1).toISOString(), SYSTEM),
+        transition("h-nina-2", "draft", "sent", fridaySend(currentId, 0), SYSTEM),
+        transition(
+          "h-nina-3",
+          "sent",
+          "approved",
+          now.toISOString(),
+          SCHOOL_USER(SCHOOLS.greenfield),
+          { approverName: "Patrice Bell" },
+        ),
+      ],
+    }),
+    makeSheet({
+      id: "ts-ok-harbour",
+      periodId: currentId,
+      status: "approved",
+      teacher: TEACHERS.james,
+      school: SCHOOLS.harbour,
+      consultant: jordan,
+      days: 3,
+      cost: { payRate: 140, chargeRate: 185 },
+      sentAt: fridaySend(currentId, 0),
+      viewedAt: now.toISOString(),
+      approvedAt: now.toISOString(),
+      approverName: "Chris Adey",
+      confirmedDays: 3,
+      role: "cover_supervisor",
+      workedDays: [
+        { date: dayOn(currentStarts, 0), units: 1, unitType: "day", role: "cover_supervisor" },
+        { date: dayOn(currentStarts, 1), units: 1, unitType: "day", role: "cover_supervisor" },
+        { date: dayOn(currentStarts, 2), units: 1, unitType: "day", role: "cover_supervisor" },
+        {
+          date: dayOn(currentStarts, 3),
+          units: 0,
+          unitType: "day",
+          role: "cover_supervisor",
+        },
+      ],
+      history: [
+        transition("h-james-1", null, "draft", subDays(now, 1).toISOString(), SYSTEM),
+        transition("h-james-2", "draft", "sent", fridaySend(currentId, 0), SYSTEM),
+        transition(
+          "h-james-3",
+          "sent",
+          "approved",
+          now.toISOString(),
+          SCHOOL_USER(SCHOOLS.harbour),
+          { approverName: "Chris Adey" },
+        ),
+      ],
+    }),
+    makeSheet({
+      id: "ts-ok-gap",
+      periodId: currentId,
+      status: "approved",
+      teacher: TEACHERS.tom,
+      school: SCHOOLS.meadowbank,
+      consultant: alex,
+      days: 2,
+      cost: { payRate: 160, chargeRate: 210 },
+      sentAt: fridaySend(currentId, 0),
+      viewedAt: now.toISOString(),
+      approvedAt: now.toISOString(),
+      approverName: "Helen Crowe",
+      confirmedDays: 2,
+      role: "supply_teacher",
+      workedDays: [
+        { date: dayOn(currentStarts, 0), units: 1, unitType: "day", role: "supply_teacher" },
+        { date: dayOn(currentStarts, 1), units: 1, unitType: "day", role: "supply_teacher" },
+      ],
+      rateSchedule: [
+        {
+          from: dayOn(currentStarts, 0),
+          to: dayOn(currentStarts, 0),
+          dayRate: 210,
+        },
+      ],
+      history: [
+        transition("h-gap-1", null, "draft", subDays(now, 1).toISOString(), SYSTEM),
+        transition("h-gap-2", "draft", "sent", fridaySend(currentId, 0), SYSTEM),
+        transition(
+          "h-gap-3",
+          "sent",
+          "approved",
+          now.toISOString(),
+          SCHOOL_USER(SCHOOLS.meadowbank),
+          { approverName: "Helen Crowe" },
         ),
       ],
     }),
@@ -351,6 +509,8 @@ export function buildMockTimesheets(now = new Date()): Timesheet[] {
       approvedAt: subDays(now, 6).toISOString(),
       approverName: "Neil Cartwright",
       confirmedDays: 4,
+      invoiced: true,
+      invoiceId: "inv-seed-old",
       history: [
         transition("h22", "draft", "sent", subDays(now, 18).toISOString(), SYSTEM),
         transition(

@@ -16,6 +16,7 @@ import {
   Menu,
   Building,
   FileText,
+  Receipt,
   Clock,
   Briefcase,
   UserPlus,
@@ -110,6 +111,12 @@ const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
       label: "Timesheets",
       icon: <FileText size={20} />,
       path: "/timesheets",
+    },
+    {
+      id: "invoices",
+      label: "Invoices",
+      icon: <Receipt size={20} />,
+      path: "/invoices",
     },
     {
       id: "vacancies",

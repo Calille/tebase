@@ -4,6 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Calendar, Mail, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -35,6 +36,7 @@ import type { PayWeek } from "@/types/payroll";
 import type { PartyRef } from "@/types/party";
 import {
   TIMESHEET_QUERY_REASON_LABELS,
+  billingStateFor,
   boardColumnFor,
   hoursDelta,
   type Timesheet,
@@ -381,7 +383,10 @@ const Timesheets = () => {
               {formatGbp(board?.confirmed.chargeValue ?? 0)}
             </p>
             <p className="text-xs text-gray-500">
-              {board?.confirmed.count ?? 0} approved
+              {board?.confirmed.count ?? 0} approved ·{" "}
+              <Link to="/invoices" className="underline">
+                ready to invoice
+              </Link>
             </p>
           </CardContent>
         </Card>
@@ -631,7 +636,22 @@ function SheetTable({
                       {formatGbp(sheet.chargeValue)}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={sheet.status} />
+                      <div className="flex flex-wrap items-center gap-1">
+                        <StatusBadge status={sheet.status} />
+                        {sheet.status === "approved" ? (
+                          <Badge
+                            className={
+                              billingStateFor(sheet) === "invoiced"
+                                ? "bg-slate-200 text-slate-800"
+                                : "bg-sky-100 text-sky-800"
+                            }
+                          >
+                            {billingStateFor(sheet) === "invoiced"
+                              ? "Invoiced"
+                              : "Ready to invoice"}
+                          </Badge>
+                        ) : null}
+                      </div>
                     </TableCell>
                     {showOverdue && (
                       <TableCell>

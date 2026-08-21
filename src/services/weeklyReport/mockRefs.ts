@@ -24,6 +24,8 @@ export const TEACHERS = {
   priya: { id: "tch-priya", name: "Priya Nair" },
   tom: { id: "tch-tom", name: "Tom Hughes" },
   aisha: { id: "tch-aisha", name: "Aisha Khan" },
+  nina: { id: "tch-nina", name: "Nina Cole" },
+  james: { id: "tch-james", name: "James Okonkwo" },
 } as const;
 
 export function consultantById(id: string): PartyRef | undefined {

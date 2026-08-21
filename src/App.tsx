@@ -13,6 +13,7 @@ import SchoolsPage from "./pages/SchoolsPage";
 import BookingsPage from "./pages/BookingsPage";
 import TeacherAvailabilityPage from "./pages/TeacherAvailabilityPage";
 import TimesheetsPage from "./pages/TimesheetsPage";
+import InvoicesPage from "./pages/InvoicesPage";
 import VacanciesPage from "./pages/VacanciesPage";
 import SettingsPage from "./pages/SettingsPage";
 import ManagementPage from "./pages/ManagementPage";
@@ -93,6 +94,7 @@ function App() {
             <Route path="/awr-tracking" element={<ProtectedRoute><AWRTrackingPage /></ProtectedRoute>} />
             <Route path="/availability" element={<ProtectedRoute><TeacherAvailabilityPage /></ProtectedRoute>} />
             <Route path="/timesheets" element={<ProtectedRoute><TimesheetsPage /></ProtectedRoute>} />
+            <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
             <Route path="/vacancies" element={<ProtectedRoute><VacanciesPage /></ProtectedRoute>} />
             <Route path="/management" element={<ProtectedRoute><ManagementPage /></ProtectedRoute>} />
             <Route path="/team-leaders" element={<ProtectedRoute><TeamLeadersPage /></ProtectedRoute>} />

@@ -1,6 +1,65 @@
 import type { PartyRef } from "./party";
 import type { PayrollCostModel } from "./payroll";
 
+export type TeacherRole =
+  | "supply_teacher"
+  | "teaching_assistant"
+  | "cover_supervisor"
+  | "hlta"
+  | "nursery_nurse"
+  | "instructor";
+
+export const TEACHER_ROLE_LABELS: Record<TeacherRole, string> = {
+  supply_teacher: "Supply teacher",
+  teaching_assistant: "Teaching assistant",
+  cover_supervisor: "Cover supervisor",
+  hlta: "HLTA",
+  nursery_nurse: "Nursery nurse",
+  instructor: "Instructor",
+};
+
+export type WorkedUnitType = "day" | "hour";
+
+export interface WorkedDay {
+  date: string;
+  units: number;
+  unitType: WorkedUnitType;
+  role: TeacherRole;
+}
+
+/**
+ * Charge rates in force over a date range (inclusive). Long-term bookings and
+ * AWR parity change the rate mid-assignment — invoice lines must use the
+ * rate on the date worked, not the current rate.
+ */
+export interface RatePeriod {
+  from: string;
+  to: string;
+  dayRate?: number;
+  hourRate?: number;
+}
+
+export type TimesheetBillingState = "not_ready" | "ready_to_invoice" | "invoiced";
+
+export function resolveChargeRate(
+  schedule: RatePeriod[],
+  date: string,
+  unitType: WorkedUnitType,
+): number | null {
+  const match = schedule.find(
+    (period) => period.from <= date && period.to >= date,
+  );
+  if (!match) return null;
+  const rate = unitType === "hour" ? match.hourRate : match.dayRate;
+  return rate == null ? null : rate;
+}
+
+export function billingStateFor(sheet: Timesheet): TimesheetBillingState {
+  if (sheet.invoiced || sheet.invoiceId) return "invoiced";
+  if (sheet.status === "approved") return "ready_to_invoice";
+  return "not_ready";
+}
+
 /**
  * Timesheet status is an explicit union, not a free string.
  *
@@ -142,6 +201,15 @@ export interface Timesheet {
   hasBookings: boolean;
   query: TimesheetQuery | null;
   history: TimesheetTransition[];
+  /**
+   * Per-date attendance used to build invoice lines. Half days are `0.5`.
+   * Invoice rates are resolved from `rateSchedule` per date, not `cost.chargeRate`.
+   */
+  workedDays: WorkedDay[];
+  rateSchedule: RatePeriod[];
+  /** True once this sheet is on an issued invoice. */
+  invoiced: boolean;
+  invoiceId: string | null;
 }
 
 export interface UnapprovedTimesheetSummary {

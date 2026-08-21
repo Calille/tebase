@@ -40,6 +40,8 @@ function clone(sheet: Timesheet): Timesheet {
     teacher: { ...sheet.teacher },
     consultant: { ...sheet.consultant },
     cost: { ...sheet.cost },
+    workedDays: sheet.workedDays.map((day) => ({ ...day })),
+    rateSchedule: sheet.rateSchedule.map((period) => ({ ...period })),
     query: sheet.query
       ? {
           ...sheet.query,
@@ -428,6 +430,38 @@ export const timesheetService = {
     }
 
     replaceSheet(next);
+    return demoWriteResult();
+  },
+
+  async listReadyToInvoice(periodId?: string): Promise<Timesheet[]> {
+    seedIfNeeded();
+    return sheets
+      .filter((sheet) => {
+        if (sheet.status !== "approved") return false;
+        if (sheet.invoiced || sheet.invoiceId) return false;
+        if (periodId && sheet.periodId !== periodId) return false;
+        return true;
+      })
+      .map(clone);
+  },
+
+  async markInvoiced(ids: string[], invoiceId: string): Promise<WriteResult> {
+    seedIfNeeded();
+    for (const id of ids) {
+      const current = sheets.find((sheet) => sheet.id === id);
+      if (!current) continue;
+      replaceSheet({ ...current, invoiced: true, invoiceId });
+    }
+    return demoWriteResult();
+  },
+
+  async clearInvoiceLink(ids: string[]): Promise<WriteResult> {
+    seedIfNeeded();
+    for (const id of ids) {
+      const current = sheets.find((sheet) => sheet.id === id);
+      if (!current) continue;
+      replaceSheet({ ...current, invoiced: false, invoiceId: null });
+    }
     return demoWriteResult();
   },
 };
