@@ -3,6 +3,7 @@ import type { School } from "@/services/schoolService";
 import type { Booking } from "@/services/bookingService";
 import { bookingListDuration } from "./bookings";
 import type { SeedBooking, SeedSchool, SeedTeacher } from "../types";
+import { stableBucket } from "@/lib/stableBucket";
 
 export function toTeacherProfile(teacher: SeedTeacher): Teacher {
   return {
@@ -32,6 +33,21 @@ export function toTeacherProfile(teacher: SeedTeacher): Teacher {
       {
         name: "Professional reference 2",
         status: teacher.missingReference ? "missing" : "valid",
+        expiryDate: "",
+      },
+      {
+        name: "National Insurance number",
+        status: teacher.niNumber ? "valid" : "missing",
+        expiryDate: "",
+      },
+      {
+        name: "Right to work",
+        status: stableBucket(`${teacher.id}:right_to_work`, 13) === 0 ? "missing" : "valid",
+        expiryDate: "",
+      },
+      {
+        name: "Photo ID",
+        status: stableBucket(`${teacher.id}:photo_id`, 11) === 0 ? "missing" : "valid",
         expiryDate: "",
       },
     ],
