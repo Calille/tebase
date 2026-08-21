@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Link2Off, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import {
 import type { BillTo } from "@/types/billing";
 import type { XeroConnectionHealth, XeroConnectionStatus } from "@/types/xero";
 import { xeroService } from "@/services/invoices/xeroService";
+import { toast } from "@/components/ui/use-toast";
 
 const STATUS_STYLES: Record<XeroConnectionStatus, string> = {
   connected: "bg-emerald-100 text-emerald-800",
@@ -38,11 +40,24 @@ const XeroConnectionPanel = ({
   billTos,
   onRefresh,
 }: XeroConnectionPanelProps) => {
-  const authorizeUrl = xeroService.getAuthorizeUrl();
+  const [busy, setBusy] = useState(false);
 
-  const handleConnect = () => {
-    if (!authorizeUrl) return;
-    window.location.assign(authorizeUrl);
+  const handleConnect = async () => {
+    setBusy(true);
+    try {
+      const result = await xeroService.startConnect();
+      if ("error" in result) {
+        toast({
+          title: "Cannot start Xero OAuth",
+          description: result.error,
+          variant: "destructive",
+        });
+        return;
+      }
+      window.location.assign(result.authorizeUrl);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -94,7 +109,7 @@ const XeroConnectionPanel = ({
             </Alert>
           )}
           <div className="flex flex-wrap gap-2">
-            <Button onClick={handleConnect} disabled={!authorizeUrl}>
+            <Button onClick={handleConnect} disabled={busy}>
               {health.status === "disconnected" ? "Connect Xero" : "Re-authorise"}
             </Button>
             <Button variant="outline" onClick={onRefresh}>
@@ -102,12 +117,10 @@ const XeroConnectionPanel = ({
               Refresh health
             </Button>
           </div>
-          {!authorizeUrl ? (
-            <p className="text-xs text-gray-500">
-              Connect needs <code>VITE_SUPABASE_URL</code> so the browser can
-              open the Edge Function. It is not set in this session.
-            </p>
-          ) : null}
+          <p className="text-xs text-gray-500">
+            Secrets stay on the Edge Function: XERO_CLIENT_ID, XERO_CLIENT_SECRET,
+            XERO_REDIRECT_URI, APP_URL. The browser never receives a token.
+          </p>
         </CardContent>
       </Card>
 

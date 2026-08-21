@@ -7,14 +7,9 @@ import { billToById } from "@/services/invoices/mockBillTos";
 import { buildPushLine, lineCharge } from "@/services/invoices/pushLines";
 import { validateXeroPush } from "@/services/invoices/pushValidation";
 import { ALL_BILLABLE, xeroService } from "@/services/invoices/xeroService";
-import type { Timesheet } from "@/types/timesheet";
 
 const NOW = new Date(2026, 7, 21, 12);
 const PERIOD = payWeekContaining(NOW).id;
-
-function sheetLineIds(sheet: Timesheet): string[] {
-  return sheet.workedDays.map((day) => `${sheet.id}:${day.date}`);
-}
 
 describe("rate on the date worked", () => {
   it("uses the schedule in force that day, including half days", () => {
@@ -143,8 +138,11 @@ describe("xero push payload (what we send, not a local invoice)", () => {
     expect(aged.invoices).toEqual([]);
   });
 
-  it("keeps line ids stable for selected rows", async () => {
-    const sheet = await timesheetService.getById("ts-ok-1");
-    expect(sheetLineIds(sheet!).length).toBeGreaterThan(0);
+  it("starts OAuth only through the Edge Function, never from the browser", async () => {
+    const result = await xeroService.startConnect();
+    expect("error" in result).toBe(true);
+    if ("error" in result) {
+      expect(result.error).toMatch(/Supabase is not configured|Edge Function/i);
+    }
   });
 });

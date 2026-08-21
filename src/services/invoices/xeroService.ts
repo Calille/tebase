@@ -1,5 +1,4 @@
 import { roundGbp } from "@/types/payroll";
-import type { PartyRef } from "@/types/party";
 import type { BillTo } from "@/types/billing";
 import {
   AGE_BUCKETS,
@@ -75,13 +74,26 @@ export const xeroService = {
   },
 
   /**
-   * Browser never talks to Xero. Connect sends the user to our Edge Function,
-   * which redirects to Xero's authorize URL.
+   * Browser never talks to Xero. The SPA asks our Edge Function for the
+   * authorize URL, then the browser follows it.
    */
-  getAuthorizeUrl(): string | null {
-    const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-    if (!url?.startsWith("https://")) return null;
-    return `${url.replace(/\/$/, "")}/functions/v1/xero-oauth-callback`;
+  async startConnect(): Promise<{ authorizeUrl: string } | { error: string }> {
+    if (!isSupabaseConfigured) {
+      return {
+        error:
+          "Supabase is not configured, so the OAuth Edge Function cannot be reached.",
+      };
+    }
+    const { data, error } = await supabase.functions.invoke(
+      "xero-oauth-callback",
+      { body: { action: "start" } },
+    );
+    if (error) {
+      return { error: error.message };
+    }
+    const payload = data as { authorizeUrl?: string; error?: string } | null;
+    if (payload?.authorizeUrl) return { authorizeUrl: payload.authorizeUrl };
+    return { error: payload?.error || "Could not start Xero OAuth." };
   },
 
   async listBillTos(): Promise<BillTo[]> {
@@ -196,8 +208,4 @@ export const xeroService = {
   },
 
   billToForSchool: billToForSchoolId,
-
-  connectionActorPlaceholder(): PartyRef {
-    return { id: "xero", name: "Xero" };
-  },
 };

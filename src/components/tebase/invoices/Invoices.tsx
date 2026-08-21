@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import DemoBanner from "@/components/tebase/shared/DemoBanner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { xeroService } from "@/services/invoices/xeroService";
@@ -15,7 +16,9 @@ import AgedDebtPanel from "./AgedDebtPanel";
 import XeroConnectionPanel from "./XeroConnectionPanel";
 
 const Invoices = () => {
-  const [tab, setTab] = useState("queue");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "queue";
+  const [tab, setTab] = useState(initialTab);
   const [weeks, setWeeks] = useState<PayWeek[]>([]);
   const [periodId, setPeriodId] = useState("");
   const [health, setHealth] = useState<XeroConnectionHealth | null>(null);
@@ -50,6 +53,14 @@ const Invoices = () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const xero = searchParams.get("xero");
+    if (!xero) return;
+    if (xero === "connected" || xero === "error") setTab("connection");
+    loadHealth();
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams, loadHealth]);
 
   return (
     <div className="space-y-4">
