@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
+import { toastWriteResult } from "@/lib/persistence";
 import { Loader2, Upload, FileText, Download, Trash2, Eye, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { schoolService } from "@/services/schoolService";
@@ -86,38 +87,24 @@ const SchoolDocuments = ({
         url: documentUrl,
       };
 
-      const success = await schoolService.addSchoolDocument(
+      const result = await schoolService.addSchoolDocument(
         schoolId,
         documentToAdd
       );
 
-      if (success) {
-        toast({
-          title: "Success",
-          description: "Document added successfully",
-        });
-        
-        // Reset form
+      toastWriteResult("Document added", result);
+
+      if (result.ok) {
         setNewDocument({
           name: "",
           type: "policy",
           url: "",
         });
         setFile(null);
-        
-        // Close dialog
         setIsAddDialogOpen(false);
-        
-        // Notify parent component
         if (onDocumentAdded) {
           onDocumentAdded();
         }
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to add document",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       console.error("Error adding document:", error);

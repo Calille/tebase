@@ -1,0 +1,20 @@
+# Edge Functions for Tebase.
+# Xero OAuth callback must accept Xero's unauthenticated redirect.
+
+[functions.xero-oauth-callback]
+verify_jwt = false
+
+[functions.xero-token-refresh]
+verify_jwt = false
+
+[functions.xero-push-invoices]
+verify_jwt = false
+
+[functions.xero-sync-status]
+verify_jwt = false
+
+[functions.timesheet-send]
+verify_jwt = false
+
+[functions.send-timesheets]
+verify_jwt = false

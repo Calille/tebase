@@ -5,12 +5,15 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Home from "./components/home";
 import LoginPage from "./pages/LoginPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import TestPage from "./pages/TestPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import HelpPage from "./pages/HelpPage";
+import MissingConfigPage from "./pages/MissingConfigPage";
 import TeachersPage from "./pages/TeachersPage";
 import SchoolsPage from "./pages/SchoolsPage";
 import BookingsPage from "./pages/BookingsPage";
 import TeacherAvailabilityPage from "./pages/TeacherAvailabilityPage";
 import TimesheetsPage from "./pages/TimesheetsPage";
+import InvoicesPage from "./pages/InvoicesPage";
 import VacanciesPage from "./pages/VacanciesPage";
 import SettingsPage from "./pages/SettingsPage";
 import ManagementPage from "./pages/ManagementPage";
@@ -25,6 +28,9 @@ import WeeklyReportPage from "./pages/WeeklyReportPage";
 import PayrollPage from "./pages/PayrollPage";
 import ITAdminPage from "./pages/ITAdminPage";
 import AWRTrackingPage from "./pages/AWRTrackingPage";
+import { ADMIN_ROLES } from "./lib/roles";
+import { SKIP_AUTH } from "./lib/authMode";
+import { isSupabaseConfigured } from "./lib/supabase";
 import routes from "tempo-routes";
 import React from "react";
 
@@ -42,25 +48,36 @@ const TestComponent = () => {
   );
 };
 
-// Lazy load teacher routes
-const NewTeacherPage = lazy(() => import('./routes/teachers/new.tsx'));
-const TeacherDetailPage = lazy(() => import('./routes/teachers/[id].tsx'));
+const NewTeacherPage = lazy(() => import("./pages/NewTeacherPage"));
+const TeacherDetailPage = lazy(() => import("./pages/TeacherRecordPage"));
+const NewSchoolPage = lazy(() => import("./pages/NewSchoolPage"));
+const SchoolDetailPage = lazy(() => import("./pages/SchoolRecordPage"));
+const TestPage = lazy(() => import("./pages/TestPage"));
 
-// Lazy load school routes
-const SchoolsListPage = lazy(() => import('./routes/schools/index.tsx'));
-const NewSchoolPage = lazy(() => import('./routes/schools/new.tsx'));
-const SchoolDetailPage = lazy(() => import('./routes/schools/[id].tsx'));
+function TempoRoutes() {
+  return useRoutes(routes);
+}
 
 function App() {
+  if (!SKIP_AUTH && !isSupabaseConfigured) {
+    return <MissingConfigPage />;
+  }
+
   return (
     <AuthProvider>
       <Suspense fallback={<p>Loading...</p>}>
         <div className="app">
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={SKIP_AUTH ? <Navigate to="/" replace /> : <LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/test" element={<TestPage />} />
-            <Route path="/test-no-auth" element={<TestComponent />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />
+            {import.meta.env.DEV && (
+              <>
+                <Route path="/test" element={<TestPage />} />
+                <Route path="/test-no-auth" element={<TestComponent />} />
+              </>
+            )}
             <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
             <Route path="/teachers" element={<ProtectedRoute><TeachersPage /></ProtectedRoute>} />
             <Route path="/teachers/new" element={<ProtectedRoute><Suspense fallback={<p>Loading...</p>}><NewTeacherPage /></Suspense></ProtectedRoute>} />
@@ -77,6 +94,7 @@ function App() {
             <Route path="/awr-tracking" element={<ProtectedRoute><AWRTrackingPage /></ProtectedRoute>} />
             <Route path="/availability" element={<ProtectedRoute><TeacherAvailabilityPage /></ProtectedRoute>} />
             <Route path="/timesheets" element={<ProtectedRoute><TimesheetsPage /></ProtectedRoute>} />
+            <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
             <Route path="/vacancies" element={<ProtectedRoute><VacanciesPage /></ProtectedRoute>} />
             <Route path="/management" element={<ProtectedRoute><ManagementPage /></ProtectedRoute>} />
             <Route path="/team-leaders" element={<ProtectedRoute><TeamLeadersPage /></ProtectedRoute>} />
@@ -87,10 +105,10 @@ function App() {
             <Route path="/complaints" element={<ProtectedRoute><ComplaintsPage /></ProtectedRoute>} />
             <Route path="/directors" element={<ProtectedRoute><DirectorsPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-            <Route path="/it-admin" element={<ProtectedRoute><ITAdminPage /></ProtectedRoute>} />
+            <Route path="/it-admin" element={<ProtectedRoute roles={ADMIN_ROLES}><ITAdminPage /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
+          {import.meta.env.VITE_TEMPO === "true" && <TempoRoutes />}
         </div>
       </Suspense>
     </AuthProvider>

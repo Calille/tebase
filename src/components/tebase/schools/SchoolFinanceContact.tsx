@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { School } from "@/services/schoolService";
 
 // Define the form schema
 const financeContactSchema = z.object({
@@ -43,8 +44,8 @@ type FinanceContactValues = z.infer<typeof financeContactSchema>;
 
 interface SchoolFinanceContactProps {
   schoolId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: Partial<School>;
+  onSave?: (data: FinanceContactValues) => void;
   readOnly?: boolean;
 }
 
@@ -60,8 +61,12 @@ const SchoolFinanceContact = ({
       : undefined
   );
 
+  const billingAddress = initialData?.financeContact?.billingAddress as
+    | (School["financeContact"]["billingAddress"] & { useSameAddress?: boolean })
+    | undefined;
+
   const [useSameAddress, setUseSameAddress] = React.useState(
-    initialData?.financeContact?.billingAddress?.useSameAddress !== false
+    billingAddress?.useSameAddress !== false
   );
 
   // Initialize the form with default values or initial data
@@ -74,7 +79,7 @@ const SchoolFinanceContact = ({
         phone: initialData?.financeContact?.phone || "",
         email: initialData?.financeContact?.email || "",
         billingAddress: {
-          useSameAddress: initialData?.financeContact?.billingAddress?.useSameAddress !== false,
+          useSameAddress: billingAddress?.useSameAddress !== false,
           street: initialData?.financeContact?.billingAddress?.street || "",
           city: initialData?.financeContact?.billingAddress?.city || "",
           state: initialData?.financeContact?.billingAddress?.state || "",

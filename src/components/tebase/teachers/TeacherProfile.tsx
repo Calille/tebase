@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { teacherService } from "@/services/teacherService";
+import { teacherService, Teacher, TeacherFormSeed } from "@/services/teacherService";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
+import DemoBanner from "@/components/tebase/shared/DemoBanner";
 
 import TeacherPersonalInfo from "./TeacherPersonalInfo";
 import TeacherProfessionalInfo from "./TeacherProfessionalInfo";
@@ -17,7 +19,7 @@ interface TeacherProfileProps {
   teacherId?: string;
   isNewTeacher?: boolean;
   onBack?: () => void;
-  onSave?: (data: any) => void;
+  onSave?: (data: Teacher) => void;
   readOnly?: boolean;
 }
 
@@ -29,7 +31,7 @@ const TeacherProfile = ({
   readOnly = false,
 }: TeacherProfileProps) => {
   const [activeTab, setActiveTab] = useState("personal");
-  const [teacher, setTeacher] = useState<any>(null);
+  const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [loading, setLoading] = useState(!isNewTeacher);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,56 +65,62 @@ const TeacherProfile = ({
     fetchTeacher();
   }, [teacherId, isNewTeacher]);
 
-  // Handle section save
-  const handleSectionSave = (section: string, data: any) => {
-    // Update the local teacher data
-    setTeacher((prevTeacher: any) => ({
-      ...prevTeacher,
-      ...data,
-    }));
+  const handleSectionSave = (section: string, data: TeacherFormSeed) => {
+    setTeacher((prevTeacher) =>
+      prevTeacher ? ({ ...prevTeacher, ...data } as Teacher) : (data as Teacher)
+    );
 
-    // Show success message
-    toast({
-      title: "Section Saved",
-      description: `${section} information has been saved.`,
-    });
+    toastDemoAction(`${section} section saved`);
 
-    // If this is a new teacher and we're saving the personal info, create the teacher
     if (isNewTeacher && section === "Personal" && !teacherId) {
       handleCreateTeacher(data);
     }
   };
 
-  // Handle creating a new teacher
-  const handleCreateTeacher = async (personalData: any) => {
+  const handleCreateTeacher = async (personalData: TeacherFormSeed) => {
     try {
       setIsSaving(true);
-      
-      // Create the teacher
-      const newTeacher = await teacherService.createTeacher(personalData);
-      
-      if (newTeacher) {
-        // Update the local state
-        setTeacher(newTeacher);
-        
-        // Notify parent component
-        if (onSave) {
-          onSave(newTeacher);
-        }
-        
-        toast({
-          title: "Teacher Created",
-          description: "The teacher has been created successfully.",
-        });
-        
-        // Move to the next tab
-        setActiveTab("professional");
-      } else {
+
+      const name = personalData.name || teacher?.name;
+      const email = personalData.email || teacher?.email;
+      if (!name || !email) {
         toast({
           title: "Error",
-          description: "Failed to create teacher",
+          description: "Name and email are required to create a teacher.",
           variant: "destructive",
         });
+        return;
+      }
+
+      const result = await teacherService.createTeacher({
+        ...teacher,
+        ...personalData,
+        name,
+        email,
+        address:
+          typeof personalData.address === "string"
+            ? personalData.address
+            : personalData.address
+              ? [
+                  personalData.address.street,
+                  personalData.address.city,
+                  personalData.address.state,
+                  personalData.address.zip,
+                  personalData.address.country,
+                ]
+                  .filter(Boolean)
+                  .join(", ")
+              : teacher?.address,
+      } as Parameters<typeof teacherService.createTeacher>[0]);
+
+      toastWriteResult("Teacher created", result);
+
+      if (result.data) {
+        setTeacher(result.data);
+        if (onSave) {
+          onSave(result.data);
+        }
+        setActiveTab("professional");
       }
     } catch (error) {
       console.error("Error creating teacher:", error);
@@ -135,34 +143,14 @@ const TeacherProfile = ({
       
       // If this is a new teacher, we've already created it when saving the personal info
       if (!isNewTeacher && teacherId) {
-        // Update the existing teacher
-        const success = await teacherService.updateTeacher(teacherId, teacher);
-        
-        if (success) {
-          // Notify parent component
-          if (onSave) {
-            onSave(teacher);
-          }
-          
-          toast({
-            title: "Profile Saved",
-            description: "The teacher profile has been saved successfully.",
-          });
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to save teacher profile",
-            variant: "destructive",
-          });
+        const result = await teacherService.updateTeacher(teacherId, teacher);
+        toastWriteResult("Profile saved", result);
+        if (result.ok && onSave) {
+          onSave(teacher);
         }
       } else if (onSave) {
-        // Notify parent component for new teacher
         onSave(teacher);
-        
-        toast({
-          title: "Profile Saved",
-          description: "The teacher profile has been saved successfully.",
-        });
+        toastDemoAction("Profile saved");
       }
     } catch (error) {
       console.error("Error saving teacher profile:", error);
@@ -204,6 +192,7 @@ const TeacherProfile = ({
 
   return (
     <div className="space-y-6">
+      <DemoBanner />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

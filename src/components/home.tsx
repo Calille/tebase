@@ -1,129 +1,123 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { cn } from "../lib/utils";
-import Sidebar from "./tebase/Sidebar";
+import PageLayout from "./tebase/PageLayout";
+import DemoBanner from "./tebase/shared/DemoBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import {
-  Phone,
   TrendingUp,
-  UserCheck,
-  Headphones,
   Calendar,
   Building,
   Users,
   DollarSign,
   AlertTriangle,
-  Clock,
   ChevronRight,
   BarChart3,
   FileText,
   ArrowUpRight,
-  ArrowDownRight,
+  Clock,
 } from "lucide-react";
+import { teacherService } from "@/services/teacherService";
+import { schoolService } from "@/services/schoolService";
+import { bookingService } from "@/services/bookingService";
+import { weeklyReportService } from "@/services/weeklyReport";
+import { formatGbp } from "@/types/payroll";
+import { payWeekContaining } from "@/lib/payWeek";
 
 const Home = () => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [staffCount, setStaffCount] = useState(0);
+  const [schoolCount, setSchoolCount] = useState(0);
+  const [bookingCount, setBookingCount] = useState(0);
+  const [revenue, setRevenue] = useState(0);
+  const [revenueDelta, setRevenueDelta] = useState<number | null>(null);
+  const [lowMarginBookings, setLowMarginBookings] = useState<
+    { consultant: string; school: string; currentRate: number; targetRate: number; currentMargin: number }[]
+  >([]);
+  const [upcomingBookings, setUpcomingBookings] = useState<
+    { id: string; school: string; teacher: string; date: string; subject: string; status: string }[]
+  >([]);
 
-  const handleToggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
-
-  // Sample data for low margin bookings
-  const lowMarginBookings = [
-    {
-      consultant: "David Wilson",
-      school: "Northside Academy",
-      currentRate: 125,
-      targetRate: 179,
-      currentMargin: 21,
-    },
-    {
-      consultant: "Sarah Johnson",
-      school: "Oakridge Elementary",
-      currentRate: 130,
-      targetRate: 186,
-      currentMargin: 25,
-    },
-    {
-      consultant: "Jennifer Lee",
-      school: "Riverside College",
-      currentRate: 140,
-      targetRate: 200,
-      currentMargin: 27,
-    },
-  ];
-
-  // Sample data for upcoming bookings
-  const upcomingBookings = [
-    {
-      id: "book-001",
-      school: "Westfield High School",
-      teacher: "John Smith",
-      date: "Today, 9:00 AM",
-      subject: "Mathematics",
-      status: "confirmed",
-    },
-    {
-      id: "book-002",
-      school: "Oakridge Elementary",
-      teacher: "Sarah Johnson",
-      date: "Today, 1:30 PM",
-      subject: "English",
-      status: "pending",
-    },
-    {
-      id: "book-003",
-      school: "Riverside College",
-      teacher: "Michael Chen",
-      date: "Tomorrow, 10:15 AM",
-      subject: "Chemistry",
-      status: "confirmed",
-    },
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const week = payWeekContaining(new Date());
+      const [teachers, schools, report, bookings] = await Promise.all([
+        teacherService.getTeachers(),
+        schoolService.getSchools(),
+        weeklyReportService.getReport({ periodId: week.id, scope: "team" }),
+        bookingService.getBookings(),
+      ]);
+      if (cancelled) return;
+      setStaffCount(teachers.filter((teacher) => teacher.status === "active").length);
+      setSchoolCount(schools.length);
+      const weekBookings = bookings.filter(
+        (booking) => booking.startDate <= week.weekEnding && booking.endDate >= week.startsOn,
+      );
+      setBookingCount(weekBookings.length);
+      setRevenue(report.headlines.current.chargeTotal);
+      setRevenueDelta(report.headlines.charge.lastWeek.percent);
+      setLowMarginBookings(
+        report.lowMargin.flatMap((group) =>
+          group.bookings.slice(0, 2).map((booking) => ({
+            consultant: booking.consultant.name,
+            school: booking.school.name,
+            currentRate: booking.chargeRate,
+            targetRate: Math.round(booking.payRate + 50),
+            currentMargin: booking.marginPercent,
+          })),
+        ).slice(0, 6),
+      );
+      const today = new Date().toISOString().slice(0, 10);
+      setUpcomingBookings(
+        bookings
+          .filter((booking) => booking.status !== "cancelled" && booking.endDate >= today)
+          .sort((a, b) => a.startDate.localeCompare(b.startDate))
+          .slice(0, 5)
+          .map((booking) => ({
+            id: booking.id,
+            school: booking.school.name,
+            teacher: booking.teacher.name,
+            date: booking.startDate === today ? "Today" : booking.startDate,
+            subject: booking.subject,
+            status: booking.status,
+          })),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <Sidebar collapsed={sidebarCollapsed} onToggle={handleToggleSidebar} />
-
-      <main
-        className={cn(
-          "flex-1 h-screen overflow-y-auto transition-all duration-300",
-          sidebarCollapsed ? "ml-[70px]" : "ml-[50px]",
-        )}
-        style={{
-          marginLeft: sidebarCollapsed ? "70px" : "50px",
-          marginRight: 0,
-          paddingLeft: 0,
-        }}
-      >
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between p-4 bg-white border-b sticky top-0 z-10 shadow-sm">
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800">
-              Dashboard
-            </h1>
-            <div className="flex gap-2">
-              <Button variant="outline" className="bg-white">
-                <Link to="/weekly-report" className="flex items-center gap-1">
-                  <BarChart3 className="h-4 w-4" />
-                  View Reports
-                </Link>
-              </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Link
-                  to="/bookings"
-                  className="flex items-center gap-1 text-white"
-                >
-                  <Calendar className="h-4 w-4" />
-                  Manage Bookings
-                </Link>
-              </Button>
-            </div>
-          </div>
-
+    <PageLayout
+      variant="fill"
+      title="Dashboard"
+      className="bg-gray-50"
+      headerClassName="bg-white border-b sticky top-0 z-10 shadow-sm"
+      actions={
+        <div className="flex gap-2">
+          <Button variant="outline" className="bg-white">
+            <Link to="/weekly-report" className="flex items-center gap-1">
+              <BarChart3 className="h-4 w-4" />
+              View Reports
+            </Link>
+          </Button>
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Link
+              to="/bookings"
+              className="flex items-center gap-1 text-white"
+            >
+              <Calendar className="h-4 w-4" />
+              Manage Bookings
+            </Link>
+          </Button>
+        </div>
+      }
+    >
           <div className="p-6">
             <div className="max-w-[1400px] mx-auto space-y-6">
+                  <DemoBanner message="Dashboard figures are rolled up from the shared seed: the same bookings feed payroll, timesheets and the weekly report." />
               {/* Key Metrics */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
@@ -135,7 +129,7 @@ const Home = () => {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-3xl font-bold text-gray-800">248</p>
+                        <p className="text-3xl font-bold text-gray-800">{staffCount}</p>
                         <p className="text-xs text-gray-500">
                           Available for booking
                         </p>
@@ -163,7 +157,7 @@ const Home = () => {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-3xl font-bold text-gray-800">52</p>
+                        <p className="text-3xl font-bold text-gray-800">{schoolCount}</p>
                         <p className="text-xs text-gray-500">
                           Currently partnered
                         </p>
@@ -191,7 +185,7 @@ const Home = () => {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-3xl font-bold text-gray-800">124</p>
+                        <p className="text-3xl font-bold text-gray-800">{bookingCount}</p>
                         <p className="text-xs text-gray-500">This week</p>
                       </div>
                       <div className="p-3 bg-purple-50 rounded-full">
@@ -216,7 +210,7 @@ const Home = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-3xl font-bold text-gray-800">
-                          £22,500
+                          {formatGbp(revenue)}
                         </p>
                         <p className="text-xs text-gray-500">This week</p>
                       </div>
@@ -524,9 +518,7 @@ const Home = () => {
               </div>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 };
 

@@ -21,10 +21,8 @@ const ForgotPasswordPage = () => {
       return;
     }
     
-    await resetPassword(email);
-    
-    // If no error, show success message
-    if (!error) {
+    const { error: resetError } = await resetPassword(email);
+    if (!resetError) {
       setSuccessMessage("Password reset instructions have been sent to your email.");
     }
   };

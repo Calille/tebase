@@ -30,9 +30,10 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { Loader2, Lock } from "lucide-react";
-import { teacherService } from "@/services/teacherService";
+import { teacherService, TeacherFormSeed } from "@/services/teacherService";
 
 // Define the form schema with Zod
 const financialInfoSchema = z.object({
@@ -65,8 +66,8 @@ type FinancialInfoValues = z.infer<typeof financialInfoSchema>;
 
 interface TeacherFinancialInfoProps {
   teacherId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: TeacherFormSeed | null;
+  onSave?: (data: TeacherFormSeed) => void;
   readOnly?: boolean;
 }
 
@@ -85,18 +86,18 @@ const TeacherFinancialInfo = ({
     defaultValues: {
       payRate: initialData?.salaryExpectations?.min || 0,
       currency: initialData?.salaryExpectations?.currency || "GBP",
-      rateType: initialData?.salaryExpectations?.rate || "daily",
+      rateType: (initialData?.salaryExpectations?.rate as FinancialInfoValues["rateType"]) || "daily",
       
       bankName: initialData?.bankDetails?.bankName || "",
       accountName: initialData?.bankDetails?.accountName || "",
       accountNumber: initialData?.bankDetails?.accountNumber || "",
       sortCode: initialData?.bankDetails?.sortCode || "",
       
-      taxId: initialData?.taxInformation?.taxId || "",
-      taxStatus: initialData?.taxInformation?.taxStatus || "",
-      taxWithholding: initialData?.taxInformation?.taxWithholding || "",
+      taxId: String(initialData?.taxInformation?.taxId ?? ""),
+      taxStatus: String(initialData?.taxInformation?.taxStatus ?? ""),
+      taxWithholding: String(initialData?.taxInformation?.taxWithholding ?? ""),
       
-      paymentMethod: initialData?.paymentMethod || "bank_transfer",
+      paymentMethod: (initialData?.paymentMethod as FinancialInfoValues["paymentMethod"]) || "bank_transfer",
       paypalEmail: initialData?.paypalEmail || "",
     },
   });
@@ -141,36 +142,15 @@ const TeacherFinancialInfo = ({
         t_paypal_email: data.paymentMethod === "paypal" ? data.paypalEmail : null,
       };
       
-      // If there's a teacherId, update the existing teacher
       if (teacherId) {
-        const success = await teacherService.updateTeacher(teacherId, formattedData);
-        
-        if (success) {
-          toast({
-            title: "Success",
-            description: "Financial information updated successfully",
-          });
-          
-          if (onSave) {
-            onSave(formattedData);
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to update financial information",
-            variant: "destructive",
-          });
-        }
-      } else {
-        // If there's no teacherId, this is a new teacher
-        if (onSave) {
+        const result = await teacherService.updateTeacher(teacherId, formattedData);
+        toastWriteResult("Financial information updated", result);
+        if (result.ok && onSave) {
           onSave(formattedData);
         }
-        
-        toast({
-          title: "Success",
-          description: "Financial information saved",
-        });
+      } else if (onSave) {
+        onSave(formattedData);
+        toastDemoAction("Financial information saved");
       }
     } catch (error) {
       console.error("Error saving financial information:", error);

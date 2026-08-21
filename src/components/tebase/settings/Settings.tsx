@@ -6,19 +6,41 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { Lock, Palette, Bell, User, Shield, Check } from "lucide-react";
+import { Lock, Palette, Bell, User, Shield, Check, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { useAuth } from "@/contexts/AuthContext";
+import { authService } from "@/services/authService";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
+import { settingsService } from "@/services/settings/settingsService";
+import {
+  DEFAULT_MARGIN_THRESHOLDS,
+  DEFAULT_TIMESHEET_CHASE_SETTINGS,
+  type MarginThresholdSettings,
+  type TimesheetChaseSettings,
+} from "@/types/settings";
+import DevDatasetPanel from "./DevDatasetPanel";
 
 const Settings = () => {
+  const { user, updateProfile } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [theme, setTheme] = useState("blue");
   const [notifications, setNotifications] = useState(true);
   const [fontSize, setFontSize] = useState("medium");
   const [themeApplied, setThemeApplied] = useState(false);
+  const [marginFloors, setMarginFloors] = useState<MarginThresholdSettings>(
+    DEFAULT_MARGIN_THRESHOLDS,
+  );
+  const [savingFloors, setSavingFloors] = useState(false);
+  const [chaseSettings, setChaseSettings] = useState<TimesheetChaseSettings>(
+    DEFAULT_TIMESHEET_CHASE_SETTINGS,
+  );
+  const [savingChase, setSavingChase] = useState(false);
 
   // Define available themes
   const colorThemes = [
@@ -56,25 +78,84 @@ const Settings = () => {
     if (savedFontSize) {
       setFontSize(savedFontSize);
     }
-  }, []);
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+    if (user?.name) {
+      setAccountName(user.name);
+    }
+
+    settingsService.getMarginThresholds().then(setMarginFloors);
+    settingsService.getTimesheetChaseSettings().then(setChaseSettings);
+  }, [user]);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Password change logic would go here
-    console.log("Password change requested", {
-      currentPassword,
-      newPassword,
-      confirmPassword,
-    });
-    // Reset form
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    
-    toast({
-      title: "Password Changed",
-      description: "Your password has been updated successfully.",
-    });
+
+    if (!newPassword || newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New password and confirmation must match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Error",
+        description: "New password must be at least 8 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const { error } = await authService.updatePassword(newPassword);
+      if (error) {
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast({
+        title: "Password changed",
+        description: "Your password has been updated.",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Could not update your password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleSaveMarginFloors = async () => {
+    setSavingFloors(true);
+    try {
+      const result = await settingsService.saveMarginThresholds(marginFloors);
+      toastWriteResult("Margin thresholds saved", result);
+    } finally {
+      setSavingFloors(false);
+    }
+  };
+
+  const handleSaveChaseSettings = async () => {
+    setSavingChase(true);
+    try {
+      const result = await settingsService.saveTimesheetChaseSettings(chaseSettings);
+      toastWriteResult("Timesheet chase settings saved", result);
+    } finally {
+      setSavingChase(false);
+    }
   };
 
   const handleThemeChange = (value: string) => {
@@ -155,12 +236,7 @@ const Settings = () => {
   };
 
   const handleSaveNotifications = () => {
-    // Save notification preferences
-    console.log("Notification preferences saved:", { notifications });
-    toast({
-      title: "Notification Settings Saved",
-      description: "Your notification preferences have been updated.",
-    });
+    toastDemoAction("Notification preferences saved");
   };
 
   // Helper function to get CSS variable values for the theme preview
@@ -202,9 +278,12 @@ const Settings = () => {
   return (
     <div className="container mx-auto py-6 max-w-5xl">
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
+      <div className="mb-6">
+        <DevDatasetPanel />
+      </div>
 
       <Tabs defaultValue="account" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="account" className="flex items-center gap-2">
             <User className="h-4 w-4" />
             Account
@@ -220,6 +299,10 @@ const Settings = () => {
             <Bell className="h-4 w-4" />
             Notifications
           </TabsTrigger>
+          <TabsTrigger value="reports" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Reports
+          </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Security
@@ -234,16 +317,34 @@ const Settings = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" defaultValue="Admin User" />
+                <Input
+                  id="name"
+                  value={accountName || user?.name || ""}
+                  onChange={(e) => setAccountName(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" defaultValue="admin@keepeducation.com" />
+                <Input id="email" value={user?.email || ""} disabled />
               </div>
-              <Button onClick={() => {
+              <Button onClick={async () => {
+                if (!user) {
+                  toastDemoAction("Account updated");
+                  return;
+                }
+                const { error } = await authService.updateProfile(user.id, { name: accountName });
+                if (error) {
+                  toast({
+                    title: "Error",
+                    description: error,
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                await updateProfile({ name: accountName });
                 toast({
-                  title: "Account Updated",
-                  description: "Your account information has been saved successfully.",
+                  title: "Account updated",
+                  description: "Your name has been saved.",
                 });
               }}>Save Changes</Button>
             </CardContent>
@@ -540,6 +641,89 @@ const Settings = () => {
                   Save Notification Settings
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <Card>
+            <CardHeader>
+              <CardTitle>Low-margin alerts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Weekly Report flags a booking when its margin is below either
+                floor. These are starter values until you set policy — they are
+                stored here, not hardcoded on the page.
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="margin-pounds">£ per day floor</Label>
+                  <Input
+                    id="margin-pounds"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={marginFloors.poundsPerDayFloor}
+                    onChange={(event) =>
+                      setMarginFloors((current) => ({
+                        ...current,
+                        poundsPerDayFloor: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="margin-percent">% of charge floor</Label>
+                  <Input
+                    id="margin-percent"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    value={marginFloors.percentFloor}
+                    onChange={(event) =>
+                      setMarginFloors((current) => ({
+                        ...current,
+                        percentFloor: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <Button onClick={handleSaveMarginFloors} disabled={savingFloors}>
+                {savingFloors ? "Saving…" : "Save thresholds"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>Timesheet chasing</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Flag an outstanding sheet as overdue after this many days. Starter
+                value — not policy.
+              </p>
+              <div className="space-y-2 max-w-xs">
+                <Label htmlFor="overdue-days">Overdue after (days)</Label>
+                <Input
+                  id="overdue-days"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={chaseSettings.overdueAfterDays}
+                  onChange={(event) =>
+                    setChaseSettings({
+                      overdueAfterDays: Number(event.target.value),
+                    })
+                  }
+                />
+              </div>
+              <Button onClick={handleSaveChaseSettings} disabled={savingChase}>
+                {savingChase ? "Saving…" : "Save chase settings"}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

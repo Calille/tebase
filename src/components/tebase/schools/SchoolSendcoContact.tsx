@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { School } from "@/services/schoolService";
 
 // Define the form schema
 const sendcoContactSchema = z.object({
@@ -34,8 +35,8 @@ type SendcoContactValues = z.infer<typeof sendcoContactSchema>;
 
 interface SchoolSendcoContactProps {
   schoolId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: Partial<School>;
+  onSave?: (data: SendcoContactValues) => void;
   readOnly?: boolean;
 }
 
@@ -60,7 +61,9 @@ const SchoolSendcoContact = ({
         position: initialData?.sendcoContact?.position || "",
         phone: initialData?.sendcoContact?.phone || "",
         email: initialData?.sendcoContact?.email || "",
-        specializations: initialData?.sendcoContact?.specializations ? initialData.sendcoContact.specializations.join(", ") : "",
+        specializations: (initialData?.sendcoContact?.specializations
+          ? initialData.sendcoContact.specializations.join(", ")
+          : "") as unknown as SendcoContactValues["sendcoContact"]["specializations"],
         availability: initialData?.sendcoContact?.availability || "",
         notes: initialData?.sendcoContact?.notes || "",
         verified: initialData?.sendcoContact?.verified || false,

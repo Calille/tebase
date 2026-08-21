@@ -37,10 +37,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { CalendarIcon, Loader2, Upload, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { teacherService } from "@/services/teacherService";
+import { teacherService, TeacherFormSeed } from "@/services/teacherService";
 
 // Define the form schema with Zod
 const personalInfoSchema = z.object({
@@ -74,8 +75,8 @@ type PersonalInfoValues = z.infer<typeof personalInfoSchema>;
 
 interface TeacherPersonalInfoProps {
   teacherId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: TeacherFormSeed | null;
+  onSave?: (data: TeacherFormSeed) => void;
   readOnly?: boolean;
 }
 
@@ -90,6 +91,27 @@ const TeacherPersonalInfo = ({
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   // Initialize the form with default values or initial data
+  const streetAddress =
+    typeof initialData?.address === "string"
+      ? initialData.address
+      : initialData?.address?.street || "";
+  const cityAddress =
+    typeof initialData?.address === "object"
+      ? initialData.address?.city || ""
+      : "";
+  const stateAddress =
+    typeof initialData?.address === "object"
+      ? initialData.address?.state || ""
+      : "";
+  const zipAddress =
+    typeof initialData?.address === "object"
+      ? initialData.address?.zip || ""
+      : "";
+  const countryAddress =
+    typeof initialData?.address === "object"
+      ? initialData.address?.country || "United Kingdom"
+      : "United Kingdom";
+
   const form = useForm<PersonalInfoValues>({
     resolver: zodResolver(personalInfoSchema),
     defaultValues: {
@@ -98,11 +120,11 @@ const TeacherPersonalInfo = ({
       lastName: initialData?.lastName || "",
       dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : undefined,
       gender: initialData?.gender || "",
-      addressStreet: initialData?.address?.street || "",
-      addressCity: initialData?.address?.city || "",
-      addressState: initialData?.address?.state || "",
-      addressZip: initialData?.address?.zip || "",
-      addressCountry: initialData?.address?.country || "United Kingdom",
+      addressStreet: streetAddress,
+      addressCity: cityAddress,
+      addressState: stateAddress,
+      addressZip: zipAddress,
+      addressCountry: countryAddress,
       primaryPhone: initialData?.phone || "",
       secondaryPhone: initialData?.secondaryPhone || "",
       email: initialData?.email || "",
@@ -152,42 +174,21 @@ const TeacherPersonalInfo = ({
       
       // Handle profile image upload if there's a new image
       if (imageFile) {
-        // In a real implementation, you would upload the image to a storage service
-        // and get back a URL to store in the database
-        console.log("Uploading profile image:", imageFile.name);
-        // formattedData.t_profile_image_url = "https://example.com/uploaded-image.jpg";
+        toastDemoAction(
+          "Profile image selected",
+          "File upload is not connected yet. The filename is kept in this session only."
+        );
       }
       
-      // If there's a teacherId, update the existing teacher
       if (teacherId) {
-        const success = await teacherService.updateTeacher(teacherId, formattedData);
-        
-        if (success) {
-          toast({
-            title: "Success",
-            description: "Personal information updated successfully",
-          });
-          
-          if (onSave) {
-            onSave(formattedData);
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to update personal information",
-            variant: "destructive",
-          });
-        }
-      } else {
-        // If there's no teacherId, this is a new teacher
-        if (onSave) {
+        const result = await teacherService.updateTeacher(teacherId, formattedData);
+        toastWriteResult("Personal information updated", result);
+        if (result.ok && onSave) {
           onSave(formattedData);
         }
-        
-        toast({
-          title: "Success",
-          description: "Personal information saved",
-        });
+      } else if (onSave) {
+        onSave(formattedData);
+        toastDemoAction("Personal information saved");
       }
     } catch (error) {
       console.error("Error saving personal information:", error);

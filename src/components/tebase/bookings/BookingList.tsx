@@ -69,6 +69,11 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Booking, bookingService } from "@/services/bookingService";
+import { schoolService } from "@/services/schoolService";
+import { teacherService } from "@/services/teacherService";
+import DemoBanner from "@/components/tebase/shared/DemoBanner";
+import { toast } from "@/components/ui/use-toast";
+import { errorMessage } from "@/lib/errors";
 
 interface BookingListProps {
   bookings?: Booking[];
@@ -85,147 +90,9 @@ const BookingList = ({
   onUpdateBooking,
   onDeleteBooking,
 }: BookingListProps) => {
-  // Default bookings data if none provided
-  const defaultBookings: Booking[] = [
-    {
-      id: "book-001",
-      reference: "TB-2023-001",
-      school: {
-        id: "sch-001",
-        name: "Westfield High School",
-      },
-      teacher: {
-        id: "teach-001",
-        name: "John Smith",
-      },
-      subject: "Mathematics",
-      startDate: "2023-06-15",
-      endDate: "2023-06-30",
-      status: "confirmed",
-      duration: "2 weeks",
-      rate: 150,
-      notes: "Covering for Mrs. Johnson who is on maternity leave",
-    },
-    {
-      id: "book-002",
-      reference: "TB-2023-002",
-      school: {
-        id: "sch-002",
-        name: "Oakridge Elementary",
-      },
-      teacher: {
-        id: "teach-002",
-        name: "Sarah Johnson",
-      },
-      subject: "English",
-      startDate: "2023-06-20",
-      endDate: "2023-07-10",
-      status: "pending",
-      duration: "3 weeks",
-      rate: 130,
-      notes: "Temporary position for summer school program",
-    },
-    {
-      id: "book-003",
-      reference: "TB-2023-003",
-      school: {
-        id: "sch-003",
-        name: "Riverside College",
-      },
-      teacher: {
-        id: "teach-003",
-        name: "Michael Chen",
-      },
-      subject: "Chemistry",
-      startDate: "2023-06-01",
-      endDate: "2023-06-10",
-      status: "completed",
-      duration: "2 weeks",
-      rate: 175,
-      notes: "Advanced placement chemistry course",
-    },
-    {
-      id: "book-004",
-      reference: "TB-2023-004",
-      school: {
-        id: "sch-004",
-        name: "Sunshine Special School",
-      },
-      teacher: {
-        id: "teach-004",
-        name: "Emily Rodriguez",
-      },
-      subject: "Art Therapy",
-      startDate: "2023-06-25",
-      endDate: "2023-07-25",
-      status: "confirmed",
-      duration: "1 month",
-      rate: 145,
-      notes: "Working with special needs students",
-    },
-    {
-      id: "book-005",
-      reference: "TB-2023-005",
-      school: {
-        id: "sch-005",
-        name: "Northside Academy",
-      },
-      teacher: {
-        id: "teach-005",
-        name: "David Wilson",
-      },
-      subject: "Physical Education",
-      startDate: "2023-05-15",
-      endDate: "2023-06-15",
-      status: "completed",
-      duration: "1 month",
-      rate: 125,
-      notes: "Covering all PE classes for grades 9-12",
-    },
-    {
-      id: "book-006",
-      reference: "TB-2023-006",
-      school: {
-        id: "sch-007",
-        name: "Tech Institute",
-      },
-      teacher: {
-        id: "teach-007",
-        name: "Robert Taylor",
-      },
-      subject: "Computer Science",
-      startDate: "2023-07-01",
-      endDate: "2023-08-15",
-      status: "confirmed",
-      duration: "6 weeks",
-      rate: 185,
-      notes: "Teaching introductory programming and web development",
-    },
-    {
-      id: "book-007",
-      reference: "TB-2023-007",
-      school: {
-        id: "sch-002",
-        name: "Oakridge Elementary",
-      },
-      teacher: {
-        id: "teach-006",
-        name: "Jennifer Lee",
-      },
-      subject: "Music",
-      startDate: "2023-06-10",
-      endDate: "2023-06-24",
-      status: "cancelled",
-      duration: "2 weeks",
-      rate: 140,
-      notes: "Cancelled due to teacher illness",
-    },
-  ];
-
-  const [bookings, setBookings] = useState<Booking[]>(
-    initialBookings || defaultBookings,
-  );
-  const [loading, setLoading] = useState(false);
+  const [bookings, setBookings] = useState<Booking[]>(initialBookings || []);
+  const [usingSampleData, setUsingSampleData] = useState(false);
+  const [loading, setLoading] = useState(!initialBookings);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -234,7 +101,6 @@ const BookingList = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
-  // State for new booking form
   const [newBooking, setNewBooking] = useState({
     teacherId: "",
     schoolId: "",
@@ -251,22 +117,8 @@ const BookingList = ({
     untilChristmas: false,
   });
 
-  // Sample data for dropdowns
-  const schools = [
-    { id: "sch-001", name: "Westfield High School" },
-    { id: "sch-002", name: "Oakridge Elementary" },
-    { id: "sch-003", name: "Riverside College" },
-    { id: "sch-004", name: "Sunshine Special School" },
-    { id: "sch-005", name: "Northside Academy" },
-  ];
-
-  const teachers = [
-    { id: "teach-001", name: "John Smith" },
-    { id: "teach-002", name: "Sarah Johnson" },
-    { id: "teach-003", name: "Michael Chen" },
-    { id: "teach-004", name: "Emily Rodriguez" },
-    { id: "teach-005", name: "David Wilson" },
-  ];
+  const [schools, setSchools] = useState<{ id: string; name: string }[]>([]);
+  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([]);
 
   // Expanded time slots with 30-minute intervals
   const timeSlots = [
@@ -299,7 +151,7 @@ const BookingList = ({
     "20:00",
   ];
 
-  const itemsPerPage = 5;
+  const itemsPerPage = 25;
 
   // Fetch bookings from the API
   useEffect(() => {
@@ -314,13 +166,17 @@ const BookingList = ({
       setError(null);
 
       try {
-        const data = await bookingService.getBookings();
-        if (data.length > 0) {
-          setBookings(data);
-        }
+        const [data, schoolRows, teacherRows] = await Promise.all([
+          bookingService.getBookings(),
+          schoolService.getSchools(),
+          teacherService.getTeachers(),
+        ]);
+        setBookings(data);
+        setSchools(schoolRows.map((school) => ({ id: school.id, name: school.name })));
+        setTeachers(teacherRows.map((teacher) => ({ id: teacher.id, name: teacher.name })));
+        setUsingSampleData(false);
       } catch (err) {
-        console.error("Failed to fetch bookings:", err);
-        setError("Failed to load bookings. Please try again later.");
+        setError(errorMessage(err, "Failed to load bookings. Please try again later."));
       } finally {
         setLoading(false);
       }
@@ -392,49 +248,50 @@ const BookingList = ({
   const handleAddBooking = async (bookingData: Omit<Booking, "id">) => {
     try {
       const createdBooking = await bookingService.createBooking(bookingData);
-      
-      if (createdBooking) {
-        setBookings([...bookings, createdBooking]);
-        setIsAddDialogOpen(false);
-      }
+      setBookings([...bookings, createdBooking]);
+      setIsAddDialogOpen(false);
+      setUsingSampleData(false);
+      toast({
+        title: "Booking created",
+        description: "The booking has been saved.",
+      });
     } catch (err) {
-      console.error("Failed to add booking:", err);
-      alert("Failed to add booking. Please try again.");
+      toast({
+        title: "Error",
+        description: errorMessage(err, "Failed to add booking. Please try again."),
+        variant: "destructive",
+      });
     }
   };
 
-  // Handle update booking status
-  const handleUpdateStatus = async (bookingId: string, status: Booking['status']) => {
+  const handleUpdateStatus = async (bookingId: string, status: Booking["status"]) => {
     try {
-      const updatedBooking = await bookingService.updateBooking(bookingId, { status });
-      
-      if (updatedBooking) {
-        setBookings(
-          bookings.map((booking) =>
-            booking.id === bookingId
-              ? { ...booking, status }
-              : booking
-          )
-        );
-      }
+      await bookingService.updateBooking(bookingId, { status });
+      setBookings(
+        bookings.map((booking) =>
+          booking.id === bookingId ? { ...booking, status } : booking
+        )
+      );
     } catch (err) {
-      console.error("Failed to update booking status:", err);
-      alert("Failed to update booking status. Please try again.");
+      toast({
+        title: "Error",
+        description: errorMessage(err, "Failed to update booking status."),
+        variant: "destructive",
+      });
     }
   };
 
-  // Handle delete booking
   const handleDeleteBooking = async (bookingId: string) => {
     if (window.confirm("Are you sure you want to delete this booking?")) {
       try {
-        const success = await bookingService.deleteBooking(bookingId);
-        
-        if (success) {
-          setBookings(bookings.filter((booking) => booking.id !== bookingId));
-        }
+        await bookingService.deleteBooking(bookingId);
+        setBookings(bookings.filter((booking) => booking.id !== bookingId));
       } catch (err) {
-        console.error("Failed to delete booking:", err);
-        alert("Failed to delete booking. Please try again.");
+        toast({
+          title: "Error",
+          description: errorMessage(err, "Failed to delete booking."),
+          variant: "destructive",
+        });
       }
     }
   };
@@ -474,6 +331,15 @@ const BookingList = ({
   };
 
   return (
+    <div className="space-y-4">
+    {error && (
+      <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        {error}
+      </div>
+    )}
+    {usingSampleData && (
+      <DemoBanner message="Bookings are from the shared demo seed until Supabase is connected." />
+    )}
     <div className="w-full bg-white rounded-lg shadow-sm border">
       <div className="p-4 border-b">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
@@ -1048,10 +914,11 @@ const BookingList = ({
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => handleAddBooking(newBooking)}>Add Booking</Button>
+            <Button onClick={() => handleAddBooking(newBooking as unknown as Omit<Booking, "id">)}>Add Booking</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 };

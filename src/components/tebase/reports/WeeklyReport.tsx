@@ -1,15 +1,16 @@
-import React, { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  AlertTriangle,
+  Calendar,
+  Copy,
+  Printer,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,711 +19,556 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Download,
-  FileSpreadsheet,
-  Calendar,
-  ArrowUpRight,
-  ArrowDownRight,
-  DollarSign,
-  Building,
-  Users,
-  BarChart3,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-} from "lucide-react";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import DemoBanner from "@/components/tebase/shared/DemoBanner";
+import { useAuth } from "@/contexts/AuthContext";
+import { canViewTeamRollup } from "@/lib/roles";
+import { formatWeekEnding } from "@/lib/payWeek";
+import { toast } from "@/components/ui/use-toast";
+import { weeklyReportService, resolveConsultant } from "@/services/weeklyReport/weeklyReportService";
+import { buildWeeklyReportSummary } from "@/services/weeklyReport/summaryText";
+import { formatGbp } from "@/types/payroll";
+import type { PayWeek } from "@/types/payroll";
+import type { WeeklyReport, WeeklyReportScope } from "@/types/weeklyReport";
+import ReportStatTiles from "./ReportStatTiles";
+import ReportCharts from "./ReportCharts";
 
-interface WeeklyEarning {
-  id: string;
-  week: string;
-  totalBookings: number;
-  totalHours: number;
-  totalEarnings: number;
-  schools: {
-    id: string;
-    name: string;
-    bookings: number;
-    hours: number;
-    earnings: number;
-  }[];
-  comparisonToLastWeek: number;
-}
+const WeeklyReportPageBody = () => {
+  const { user } = useAuth();
+  const canTeam = canViewTeamRollup(user?.role);
+  const myConsultant = useMemo(
+    () => resolveConsultant(user ? { id: user.id, name: user.name } : null),
+    [user],
+  );
 
-const WeeklyReport = () => {
-  const [selectedWeek, setSelectedWeek] = useState("current");
-  const [expandedSchool, setExpandedSchool] = useState<string | null>(null);
+  const [weeks, setWeeks] = useState<PayWeek[]>([]);
+  const [periodId, setPeriodId] = useState("");
+  const [scope, setScope] = useState<WeeklyReportScope>(
+    canTeam && !myConsultant ? "team" : "self",
+  );
+  const [report, setReport] = useState<WeeklyReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
 
-  // Sample data for weekly earnings
-  const weeklyEarnings: WeeklyEarning[] = [
-    {
-      id: "week-current",
-      week: "June 12 - June 18, 2023",
-      totalBookings: 42,
-      totalHours: 315,
-      totalEarnings: 15750,
-      comparisonToLastWeek: 8.5,
-      schools: [
-        {
-          id: "sch-001",
-          name: "Westfield High School",
-          bookings: 12,
-          hours: 96,
-          earnings: 4800,
-        },
-        {
-          id: "sch-002",
-          name: "Oakridge Elementary",
-          bookings: 8,
-          hours: 64,
-          earnings: 3200,
-        },
-        {
-          id: "sch-003",
-          name: "Riverside College",
-          bookings: 10,
-          hours: 75,
-          earnings: 3750,
-        },
-        {
-          id: "sch-004",
-          name: "Sunshine Special School",
-          bookings: 6,
-          hours: 45,
-          earnings: 2250,
-        },
-        {
-          id: "sch-005",
-          name: "Northside Academy",
-          bookings: 6,
-          hours: 35,
-          earnings: 1750,
-        },
-      ],
-    },
-    {
-      id: "week-previous",
-      week: "June 5 - June 11, 2023",
-      totalBookings: 38,
-      totalHours: 290,
-      totalEarnings: 14500,
-      comparisonToLastWeek: -2.3,
-      schools: [
-        {
-          id: "sch-001",
-          name: "Westfield High School",
-          bookings: 10,
-          hours: 80,
-          earnings: 4000,
-        },
-        {
-          id: "sch-002",
-          name: "Oakridge Elementary",
-          bookings: 9,
-          hours: 72,
-          earnings: 3600,
-        },
-        {
-          id: "sch-003",
-          name: "Riverside College",
-          bookings: 8,
-          hours: 60,
-          earnings: 3000,
-        },
-        {
-          id: "sch-004",
-          name: "Sunshine Special School",
-          bookings: 5,
-          hours: 38,
-          earnings: 1900,
-        },
-        {
-          id: "sch-005",
-          name: "Northside Academy",
-          bookings: 6,
-          hours: 40,
-          earnings: 2000,
-        },
-      ],
-    },
-    {
-      id: "week-two-weeks-ago",
-      week: "May 29 - June 4, 2023",
-      totalBookings: 40,
-      totalHours: 305,
-      totalEarnings: 14850,
-      comparisonToLastWeek: 5.2,
-      schools: [
-        {
-          id: "sch-001",
-          name: "Westfield High School",
-          bookings: 11,
-          hours: 88,
-          earnings: 4400,
-        },
-        {
-          id: "sch-002",
-          name: "Oakridge Elementary",
-          bookings: 7,
-          hours: 56,
-          earnings: 2800,
-        },
-        {
-          id: "sch-003",
-          name: "Riverside College",
-          bookings: 9,
-          hours: 68,
-          earnings: 3400,
-        },
-        {
-          id: "sch-004",
-          name: "Sunshine Special School",
-          bookings: 7,
-          hours: 53,
-          earnings: 2650,
-        },
-        {
-          id: "sch-005",
-          name: "Northside Academy",
-          bookings: 6,
-          hours: 40,
-          earnings: 1600,
-        },
-      ],
-    },
-  ];
+  useEffect(() => {
+    if (!canTeam && scope === "team") setScope("self");
+  }, [canTeam, scope]);
 
-  // Get the selected week's data
-  const selectedWeekData =
-    weeklyEarnings.find((week) => week.id === `week-${selectedWeek}`) ||
-    weeklyEarnings[0];
+  useEffect(() => {
+    let cancelled = false;
+    async function loadWeeks() {
+      try {
+        const [list, current] = await Promise.all([
+          weeklyReportService.getPayWeeks(),
+          weeklyReportService.getCurrentPayWeek(),
+        ]);
+        if (cancelled) return;
+        setWeeks(list);
+        setPeriodId(current.id);
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Could not load weeks.");
+          setLoading(false);
+        }
+      }
+    }
+    loadWeeks();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  // Toggle expanded school
-  const toggleExpandSchool = (schoolId: string) => {
-    if (expandedSchool === schoolId) {
-      setExpandedSchool(null);
-    } else {
-      setExpandedSchool(schoolId);
+  useEffect(() => {
+    if (!periodId) return;
+    if (scope === "self" && !myConsultant && !canTeam) {
+      setReport(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    weeklyReportService
+      .getReport({
+        periodId,
+        scope: scope === "self" && !myConsultant && canTeam ? "team" : scope,
+        consultantId: scope === "self" ? myConsultant?.id : undefined,
+      })
+      .then((data) => {
+        if (!cancelled) setReport(data);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Could not load the report.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [periodId, scope, myConsultant, canTeam]);
+
+  const handleCopy = async () => {
+    if (!report) return;
+    setCopying(true);
+    try {
+      await navigator.clipboard.writeText(buildWeeklyReportSummary(report));
+      toast({
+        title: "Summary copied",
+        description: "Paste into Friday’s email.",
+      });
+    } catch {
+      toast({
+        title: "Could not copy",
+        description: "Clipboard access was blocked. Use Print instead.",
+        variant: "destructive",
+      });
+    } finally {
+      setCopying(false);
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <Select value={selectedWeek} onValueChange={setSelectedWeek}>
-          <SelectTrigger className="w-[240px]">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <SelectValue placeholder="Select week" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="current">Current Week (June 12 - 18)</SelectItem>
-            <SelectItem value="previous">
-              Previous Week (June 5 - 11)
-            </SelectItem>
-            <SelectItem value="two-weeks-ago">
-              Two Weeks Ago (May 29 - June 4)
-            </SelectItem>
-          </SelectContent>
-        </Select>
+  const effectiveScope: WeeklyReportScope =
+    scope === "self" && !myConsultant && canTeam ? "team" : scope;
 
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center gap-1">
-            <FileSpreadsheet className="h-4 w-4" />
-            Export to Excel
+  return (
+    <div className="space-y-6" id="weekly-report-print">
+      <DemoBanner />
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-3">
+          <Select value={periodId} onValueChange={setPeriodId} disabled={!periodId}>
+            <SelectTrigger className="w-full max-w-xl sm:w-[420px]">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 shrink-0" />
+                <SelectValue placeholder="Select week" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {weeks.map((week, index) => (
+                <SelectItem key={week.id} value={week.id}>
+                  {index === 0 ? "Current · " : ""}
+                  {week.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {report && (
+            <p className="text-sm text-gray-600">
+              Week ending{" "}
+              <span className="font-medium text-gray-900">
+                {formatWeekEnding(report.period.weekEnding)}
+              </span>
+              {" · "}
+              {effectiveScope === "team"
+                ? "Team roll-up"
+                : myConsultant
+                  ? myConsultant.name
+                  : "My week"}
+            </p>
+          )}
+          {canTeam && (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="team-rollup"
+                checked={effectiveScope === "team"}
+                onCheckedChange={(checked) =>
+                  setScope(checked || !myConsultant ? "team" : "self")
+                }
+              />
+              <Label htmlFor="team-rollup" className="text-sm font-normal">
+                Team roll-up
+              </Label>
+            </div>
+          )}
+          {scope === "self" && !myConsultant && canTeam && (
+            <p className="text-xs text-gray-500">
+              Signed-in user is not a consultant in the mock book, so this
+              defaults to the team roll-up.
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={handleCopy} disabled={!report || copying}>
+            <Copy className="mr-2 h-4 w-4" />
+            {copying ? "Copying…" : "Copy Friday summary"}
           </Button>
-          <Button variant="outline" className="flex items-center gap-1">
-            <Download className="h-4 w-4" />
-            Download PDF
+          <Button
+            variant="outline"
+            onClick={() => window.print()}
+            disabled={!report}
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Print / Save as PDF
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Net Profit
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold">
-                  £{(selectedWeekData.totalEarnings * 0.18).toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500">18% after expenses</p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-full">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-center text-xs">
-              {selectedWeekData.comparisonToLastWeek > 0 ? (
-                <>
-                  <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
-                  <span className="text-green-500 font-medium">
-                    {selectedWeekData.comparisonToLastWeek.toFixed(1)}%
-                  </span>
-                </>
-              ) : (
-                <>
-                  <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
-                  <span className="text-red-500 font-medium">
-                    {Math.abs(selectedWeekData.comparisonToLastWeek).toFixed(1)}
-                    %
-                  </span>
-                </>
-              )}
-              <span className="text-gray-500 ml-1">vs previous week</span>
-            </div>
-          </CardContent>
-        </Card>
+      {error && (
+        <p className="text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
 
-        <Card className="bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Weekly Pay
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold">
-                  £{selectedWeekData.totalEarnings.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500">
-                  For {selectedWeekData.week}
-                </p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-full">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-center text-xs">
-              {selectedWeekData.comparisonToLastWeek > 0 ? (
-                <>
-                  <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
-                  <span className="text-green-500 font-medium">
-                    {selectedWeekData.comparisonToLastWeek.toFixed(1)}%
-                  </span>
-                </>
-              ) : (
-                <>
-                  <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
-                  <span className="text-red-500 font-medium">
-                    {Math.abs(selectedWeekData.comparisonToLastWeek).toFixed(1)}
-                    %
-                  </span>
-                </>
-              )}
-              <span className="text-gray-500 ml-1">vs previous week</span>
-            </div>
-          </CardContent>
-        </Card>
+      {loading && !report && (
+        <p className="text-sm text-gray-500">Loading this week’s figures…</p>
+      )}
 
-        <Card className="bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Gross Charge
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold">
-                  £{(selectedWeekData.totalEarnings / 0.7).toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Amount charged to schools
-                </p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-full">
-                <DollarSign className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-            <div className="mt-2 flex items-center text-xs">
-              {selectedWeekData.comparisonToLastWeek > 0 ? (
-                <>
-                  <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
-                  <span className="text-green-500 font-medium">
-                    {selectedWeekData.comparisonToLastWeek.toFixed(1)}%
-                  </span>
-                </>
-              ) : (
-                <>
-                  <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
-                  <span className="text-red-500 font-medium">
-                    {Math.abs(selectedWeekData.comparisonToLastWeek).toFixed(1)}
-                    %
-                  </span>
-                </>
-              )}
-              <span className="text-gray-500 ml-1">vs previous week</span>
-            </div>
-          </CardContent>
-        </Card>
+      {report && (
+        <>
+          <ReportStatTiles headlines={report.headlines} />
+          <ReportCharts trend={report.marginTrend} />
 
-        <Card className="bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Margin
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold">30%</p>
-                <p className="text-xs text-gray-500">Target margin</p>
-              </div>
-              <div className="p-3 bg-purple-50 rounded-full">
-                <BarChart3 className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-            <div className="mt-2">
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div
-                  className="bg-purple-600 h-2.5 rounded-full"
-                  style={{ width: "30%" }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Current: 30% of gross charge
+          <Card className="border-red-200 bg-white">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                Low margin alerts
+              </CardTitle>
+              <p className="text-sm font-normal text-gray-500">
+                Below {formatGbp(report.thresholds.poundsPerDayFloor)}/day or{" "}
+                {report.thresholds.percentFloor}% of charge. Repeat schools are
+                grouped.{" "}
+                <Link to="/settings" className="underline">
+                  Change thresholds in Settings
+                </Link>
+                .
               </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Weekly Earnings by School</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1"
-              onClick={() => window.open("/payroll", "_self")}
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              Generate Payroll
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>School</TableHead>
-                  <TableHead>Bookings</TableHead>
-                  <TableHead>Hours</TableHead>
-                  <TableHead className="text-right">Earnings</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {selectedWeekData.schools.map((school) => (
-                  <React.Fragment key={school.id}>
-                    <TableRow
-                      className={`cursor-pointer ${expandedSchool === school.id ? "bg-gray-50" : "hover:bg-gray-50"}`}
-                      onClick={() => toggleExpandSchool(school.id)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-blue-500" />
-                          <span className="font-medium">{school.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{school.bookings}</TableCell>
-                      <TableCell>{school.hours}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        £{school.earnings.toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="p-0 h-8 w-8"
-                        >
-                          {expandedSchool === school.id ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TableCell>
+            </CardHeader>
+            <CardContent className="p-0">
+              {report.lowMargin.length === 0 ? (
+                <p className="px-6 py-8 text-sm text-gray-500">
+                  Nothing under the floor this week.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>School</TableHead>
+                      <TableHead>Teachers</TableHead>
+                      <TableHead className="text-right">Bookings / days</TableHead>
+                      <TableHead className="text-right">Worst £/day</TableHead>
+                      <TableHead className="text-right">Worst %</TableHead>
+                      <TableHead>Rate pair (worst)</TableHead>
                     </TableRow>
-                    {expandedSchool === school.id && (
-                      <TableRow className="bg-gray-50">
-                        <TableCell colSpan={5} className="p-4">
-                          <div className="space-y-4">
-                            <h4 className="font-medium">Teacher Breakdown</h4>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Teacher</TableHead>
-                                  <TableHead>Position</TableHead>
-                                  <TableHead>Hours</TableHead>
-                                  <TableHead className="text-right">
-                                    Earnings
-                                  </TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                <TableRow>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <Users className="h-4 w-4 text-green-500" />
-                                      <span>John Smith</span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>Mathematics</TableCell>
-                                  <TableCell>24</TableCell>
-                                  <TableCell className="text-right">
-                                    £1,200
-                                  </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <Users className="h-4 w-4 text-green-500" />
-                                      <span>Sarah Johnson</span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>English</TableCell>
-                                  <TableCell>20</TableCell>
-                                  <TableCell className="text-right">
-                                    £1,000
-                                  </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <Users className="h-4 w-4 text-green-500" />
-                                      <span>Michael Chen</span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>Science</TableCell>
-                                  <TableCell>16</TableCell>
-                                  <TableCell className="text-right">
-                                    £800
-                                  </TableCell>
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {report.lowMargin.map((group) => {
+                      const worst = group.bookings[0];
+                      return (
+                        <TableRow key={group.school.id} className="bg-red-50/60">
+                          <TableCell className="font-medium">
+                            {group.school.name}
+                            {group.bookingCount > 1 && (
+                              <Badge variant="secondary" className="ml-2">
+                                {group.bookingCount} bookings
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {group.teachers.map((t) => t.name).join(", ")}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {group.bookingCount} / {group.days}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium text-red-800">
+                            {formatGbp(group.worstMarginPerDay)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {group.worstMarginPercent}%
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">
+                            {worst
+                              ? `${formatGbp(worst.payRate)} pay / ${formatGbp(worst.chargeRate)} charge`
+                              : "—"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-amber-300 bg-amber-50/40">
+            <CardHeader>
+              <CardTitle className="text-lg">AWR week-12 warnings</CardTitle>
+              <p className="text-sm font-normal text-gray-600">
+                Teachers who will hit 12 weeks at the same school in the next 3
+                weeks. Parity pay is not in the model yet, so margin impact is
+                shown as unknown rather than guessed.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              {report.awrWarnings.length === 0 ? (
+                <p className="px-6 py-8 text-sm text-gray-600">
+                  Nobody approaching parity in the next 3 weeks.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Teacher</TableHead>
+                      <TableHead>School</TableHead>
+                      <TableHead>Weeks now</TableHead>
+                      <TableHead>Until parity</TableHead>
+                      <TableHead>Current margin/day</TableHead>
+                      <TableHead>Impact at parity</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {report.awrWarnings.map((item) => (
+                      <TableRow key={item.teacher.id}>
+                        <TableCell className="font-medium">
+                          {item.teacher.name}
+                        </TableCell>
+                        <TableCell>{item.school.name}</TableCell>
+                        <TableCell>
+                          {item.awrWeeks}w {item.awrDays}d
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-amber-100 text-amber-900">
+                            {item.weeksUntilParity} week
+                            {item.weeksUntilParity === 1 ? "" : "s"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {item.currentMarginPerDay == null
+                            ? "—"
+                            : formatGbp(item.currentMarginPerDay)}
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          Needs comparable perm rate
                         </TableCell>
                       </TableRow>
-                    )}
-                  </React.Fragment>
-                ))}
-                <TableRow className="font-medium bg-gray-50">
-                  <TableCell>Total</TableCell>
-                  <TableCell>{selectedWeekData.totalBookings}</TableCell>
-                  <TableCell>{selectedWeekData.totalHours}</TableCell>
-                  <TableCell className="text-right">
-                    £{selectedWeekData.totalEarnings.toLocaleString()}
-                  </TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
 
-        <Card className="bg-white">
-          <CardHeader>
-            <CardTitle>Bookings Below Target Margin</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Consultant</TableHead>
-                  <TableHead>School</TableHead>
-                  <TableHead>Current Rate</TableHead>
-                  <TableHead>Target Rate</TableHead>
-                  <TableHead>Current Margin</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow className="bg-red-50">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-red-500" />
-                      <span>David Wilson</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>Northside Academy</TableCell>
-                  <TableCell>£125</TableCell>
-                  <TableCell className="font-medium text-green-600">
-                    £179
-                  </TableCell>
-                  <TableCell>
-                    <Badge className="bg-red-100 text-red-800">21%</Badge>
-                  </TableCell>
-                </TableRow>
-                <TableRow className="bg-amber-50">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-amber-500" />
-                      <span>Sarah Johnson</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>Oakridge Elementary</TableCell>
-                  <TableCell>£130</TableCell>
-                  <TableCell className="font-medium text-green-600">
-                    £186
-                  </TableCell>
-                  <TableCell>
-                    <Badge className="bg-amber-100 text-amber-800">25%</Badge>
-                  </TableCell>
-                </TableRow>
-                <TableRow className="bg-amber-50">
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-amber-500" />
-                      <span>Jennifer Lee</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>Oakridge Elementary</TableCell>
-                  <TableCell>£140</TableCell>
-                  <TableCell className="font-medium text-green-600">
-                    £200
-                  </TableCell>
-                  <TableCell>
-                    <Badge className="bg-amber-100 text-amber-800">27%</Badge>
-                  </TableCell>
-                </TableRow>
-                <TableRow className="bg-gray-50 font-medium">
-                  <TableCell colSpan={5} className="text-center py-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1 mx-auto"
-                    >
-                      <FileSpreadsheet className="h-4 w-4" />
-                      View All Margin Reports
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Weekly Earnings Trend</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] flex items-center justify-center bg-gray-50 rounded-lg border">
-              <div className="text-center">
-                <BarChart3 className="h-12 w-12 mx-auto text-gray-300 mb-2" />
-                <p className="text-gray-500">
-                  Weekly earnings trend chart would appear here
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle className="text-lg">Unapproved timesheets</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-3xl font-bold tabular-nums">
+                  {formatGbp(report.unapprovedTimesheets.chargeValue)}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {report.unapprovedTimesheets.count} sheet
+                  {report.unapprovedTimesheets.count === 1 ? "" : "s"} this week
+                  not yet approved — money you cannot invoice.
                 </p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              <Button asChild variant="outline">
+                <Link
+                  to={`/timesheets?week=${report.period.id}&status=unapproved`}
+                >
+                  Open those timesheets
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Consultant Performance</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Consultant</TableHead>
-                  <TableHead>Bookings</TableHead>
-                  <TableHead>Avg. Rate</TableHead>
-                  <TableHead>Avg. Margin</TableHead>
-                  <TableHead className="text-right">Total Value</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-blue-500" />
-                      <span>John Smith</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>12</TableCell>
-                  <TableCell>£150</TableCell>
-                  <TableCell>
-                    <Badge className="bg-green-100 text-green-800">32%</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">£4,800</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-blue-500" />
-                      <span>Sarah Johnson</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>8</TableCell>
-                  <TableCell>£130</TableCell>
-                  <TableCell>
-                    <Badge className="bg-amber-100 text-amber-800">25%</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">£3,200</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-blue-500" />
-                      <span>Michael Chen</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>10</TableCell>
-                  <TableCell>£175</TableCell>
-                  <TableCell>
-                    <Badge className="bg-green-100 text-green-800">35%</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">£3,750</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-blue-500" />
-                      <span>Emily Rodriguez</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>6</TableCell>
-                  <TableCell>£145</TableCell>
-                  <TableCell>
-                    <Badge className="bg-green-100 text-green-800">30%</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">£2,250</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle className="text-lg">
+                Cancellations & early finishes
+              </CardTitle>
+              <p className="text-sm font-normal text-gray-500">
+                Margin lost this week:{" "}
+                <span className="font-medium text-gray-900">
+                  {formatGbp(report.interruptionMarginLost)}
+                </span>
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              {report.interruptions.length === 0 ? (
+                <p className="px-6 py-8 text-sm text-gray-500">None this week.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>School</TableHead>
+                      <TableHead>Teacher</TableHead>
+                      <TableHead className="text-right">Days lost</TableHead>
+                      <TableHead className="text-right">Margin lost</TableHead>
+                      <TableHead>Note</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {report.interruptions.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {item.type === "cancellation"
+                              ? "Cancellation"
+                              : "Early finish"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{item.school.name}</TableCell>
+                        <TableCell>{item.teacher.name}</TableCell>
+                        <TableCell className="text-right">{item.daysLost}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatGbp(item.marginLost)}
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {item.note}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle className="text-lg">Fill rate</CardTitle>
+              <p className="text-sm font-normal text-gray-500">
+                {report.fillRate.filled} filled of {report.fillRate.received}{" "}
+                received ({report.fillRate.fillPercent}%).{" "}
+                {report.fillRate.lost} lost.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {report.fillRate.lossReasons.length === 0 ? (
+                <p className="text-sm text-gray-500">No losses recorded.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {report.fillRate.lossReasons.map((item) => (
+                    <li
+                      key={item.reason}
+                      className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                    >
+                      <span>{item.reason}</span>
+                      <span className="tabular-nums font-medium">{item.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-3 text-xs text-gray-500">
+                Loss reasons are mock labels, not a locked taxonomy.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle className="text-lg">Dormant schools</CardTitle>
+              <p className="text-sm font-normal text-gray-500">
+                Regular last half-term, nothing this week. Ordered by what they
+                used to be worth.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              {report.dormantSchools.length === 0 ? (
+                <p className="px-6 py-8 text-sm text-gray-500">None flagged.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>School</TableHead>
+                      <TableHead>Last half-term</TableHead>
+                      <TableHead className="text-right">Weeks active</TableHead>
+                      <TableHead className="text-right">Was worth</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {report.dormantSchools.map((item) => (
+                      <TableRow key={item.school.id}>
+                        <TableCell className="font-medium">
+                          {item.school.name}
+                        </TableCell>
+                        <TableCell>{item.lastHalfTermLabel}</TableCell>
+                        <TableCell className="text-right">
+                          {item.weeksActiveLastHalfTerm}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatGbp(item.lastHalfTermCharge)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle className="text-lg">Next week’s forecast</CardTitle>
+              <p className="text-sm font-normal text-gray-500">
+                Confirmed diary for week ending{" "}
+                {formatWeekEnding(report.forecast.period.weekEnding)} —{" "}
+                {formatGbp(report.forecast.projectedCharge)} charge,{" "}
+                {formatGbp(report.forecast.projectedMargin)} margin.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>School</TableHead>
+                    <TableHead>Teacher</TableHead>
+                    <TableHead className="text-right">Days</TableHead>
+                    <TableHead className="text-right">Charge</TableHead>
+                    <TableHead className="text-right">Margin</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {report.forecast.bookings.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.school.name}</TableCell>
+                      <TableCell>{item.teacher.name}</TableCell>
+                      <TableCell className="text-right">{item.days}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatGbp(item.chargeTotal)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatGbp(item.marginGbp)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {scope === "self" && !myConsultant && !canTeam && (
+        <Alert>
+          <AlertTitle>No consultant match</AlertTitle>
+          <AlertDescription>
+            This login is not in the consultant book, so there is no “my week”
+            to show.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };
 
-export default WeeklyReport;
+export default WeeklyReportPageBody;

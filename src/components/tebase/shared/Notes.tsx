@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { PlusCircle, Trash2 } from "lucide-react";
 
@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { extrasService } from "@/services/extrasService";
 
 export interface Note {
   id: string;
@@ -39,46 +40,21 @@ const Notes = ({
   onDeleteNote,
 }: NotesProps) => {
   const [newNote, setNewNote] = useState("");
-  const [notes, setNotes] = useState<Note[]>(
-    initialNotes || [
-      {
-        id: "1",
-        content:
-          entityType === "teacher"
-            ? "Teacher is very reliable and has excellent classroom management skills."
-            : "School has a great working environment and staff are very supportive.",
-        createdAt: new Date(2023, 5, 15, 10, 30),
-        createdBy: {
-          name: "Alex Johnson",
-          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex",
-        },
-      },
-      {
-        id: "2",
-        content:
-          entityType === "teacher"
-            ? "Prefers secondary schools and is available for last-minute bookings."
-            : "School requires teachers to arrive 30 minutes before class starts.",
-        createdAt: new Date(2023, 5, 10, 14, 45),
-        createdBy: {
-          name: "Morgan Smith",
-          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=morgan",
-        },
-      },
-      {
-        id: "3",
-        content:
-          entityType === "teacher"
-            ? "Has strong subject knowledge in advanced mathematics topics."
-            : "School has requested the same teachers for consistency when possible.",
-        createdAt: new Date(2023, 4, 28, 9, 15),
-        createdBy: {
-          name: "Jamie Wilson",
-          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jamie",
-        },
-      },
-    ],
-  );
+  const [notes, setNotes] = useState<Note[]>(initialNotes || []);
+
+  useEffect(() => {
+    if (initialNotes) return;
+    extrasService.getNotes(entityId, entityType).then((rows) => {
+      setNotes(
+        rows.map((row) => ({
+          id: row.id,
+          content: row.content,
+          createdAt: new Date(row.createdAt),
+          createdBy: { name: row.createdByName },
+        })),
+      );
+    });
+  }, [entityId, entityType, initialNotes]);
 
   const handleAddNote = () => {
     if (!newNote.trim()) return;

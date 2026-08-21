@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { extrasService } from "@/services/extrasService";
 
 interface Alarm {
   id: string;
@@ -59,86 +60,23 @@ const Alarms = () => {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("current");
 
-  // Sample alarms data
-  const alarms: Alarm[] = [
-    {
-      id: "alarm-001",
-      title: "Teacher Availability Alert",
-      description:
-        "John Smith is unavailable for the scheduled booking tomorrow.",
-      type: "teacher",
-      priority: "high",
-      status: "active",
-      createdAt: "2023-06-15 09:30",
-    },
-    {
-      id: "alarm-002",
-      title: "School Booking Conflict",
-      description:
-        "Westfield High School has double-booked teachers for June 20.",
-      type: "booking",
-      priority: "medium",
-      status: "active",
-      createdAt: "2023-06-14 14:45",
-    },
-    {
-      id: "alarm-003",
-      title: "System Maintenance",
-      description: "Scheduled system maintenance on June 18 from 2-4 AM.",
-      type: "system",
-      priority: "low",
-      status: "active",
-      createdAt: "2023-06-13 11:20",
-    },
-    {
-      id: "alarm-004",
-      title: "Teacher Document Expiring",
-      description: "Sarah Johnson's DBS check expires in 7 days.",
-      type: "teacher",
-      priority: "medium",
-      status: "active",
-      createdAt: "2023-06-12 16:10",
-    },
-    {
-      id: "alarm-005",
-      title: "Critical Staff Shortage",
-      description:
-        "Not enough teachers available for Oakridge Elementary on June 22.",
-      type: "school",
-      priority: "critical",
-      status: "active",
-      createdAt: "2023-06-15 08:15",
-    },
-    {
-      id: "alarm-006",
-      title: "Booking Cancellation",
-      description: "Riverside College has cancelled their booking for June 19.",
-      type: "booking",
-      priority: "medium",
-      status: "resolved",
-      createdAt: "2023-06-10 13:40",
-      resolvedAt: "2023-06-10 15:20",
-    },
-    {
-      id: "alarm-007",
-      title: "Teacher Late Arrival",
-      description: "Michael Chen reported he will be 30 minutes late today.",
-      type: "teacher",
-      priority: "high",
-      status: "resolved",
-      createdAt: "2023-06-14 07:50",
-      resolvedAt: "2023-06-14 09:30",
-    },
-    {
-      id: "alarm-008",
-      title: "Payment Processing Issue",
-      description: "System unable to process payments. IT team notified.",
-      type: "system",
-      priority: "critical",
-      status: "snoozed",
-      createdAt: "2023-06-13 10:15",
-    },
-  ];
+  const [alarms, setAlarms] = useState<Alarm[]>([]);
+
+  useEffect(() => {
+    extrasService.getAlarms().then((rows) => {
+      setAlarms(
+        rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          type: row.type,
+          priority: row.priority,
+          status: row.status === "resolved" ? "resolved" : row.status === "acknowledged" ? "snoozed" : "active",
+          createdAt: row.date,
+        })),
+      );
+    });
+  }, []);
 
   // Filter alarms based on search term, status, and priority filters
   const filteredAlarms = alarms.filter((alarm) => {

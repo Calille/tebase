@@ -37,10 +37,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { CalendarIcon, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { teacherService } from "@/services/teacherService";
+import { teacherService, TeacherFormSeed } from "@/services/teacherService";
 
 // Define the form schema with Zod
 const professionalInfoSchema = z.object({
@@ -84,8 +85,8 @@ type ProfessionalInfoValues = z.infer<typeof professionalInfoSchema>;
 
 interface TeacherProfessionalInfoProps {
   teacherId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: TeacherFormSeed | null;
+  onSave?: (data: TeacherFormSeed) => void;
   readOnly?: boolean;
 }
 
@@ -108,13 +109,23 @@ const TeacherProfessionalInfo = ({
       education: initialData?.educationHistory || [
         { degree: "", institution: "", field: "", startYear: "", endYear: "", grade: "" },
       ],
-      certifications: initialData?.certifications?.map((cert: any) => ({
-        name: cert.name || "",
-        issuingAuthority: cert.issuingAuthority || "",
-        issueDate: cert.issueDate ? new Date(cert.issueDate) : undefined,
-        expiryDate: cert.expiryDate ? new Date(cert.expiryDate) : null,
-        certificateNumber: cert.certificateNumber || "",
-      })) || [],
+      certifications: (initialData?.certifications || []).map((cert) =>
+        typeof cert === "string"
+          ? {
+              name: cert,
+              issuingAuthority: "",
+              issueDate: undefined,
+              expiryDate: null,
+              certificateNumber: "",
+            }
+          : {
+              name: "",
+              issuingAuthority: "",
+              issueDate: undefined,
+              expiryDate: null,
+              certificateNumber: "",
+            }
+      ),
       subjects: initialData?.subjects?.join(", ") || "",
       gradeLevels: initialData?.gradeLevels || [],
       yearsOfExperience: initialData?.yearsOfExperience || 0,
@@ -185,42 +196,21 @@ const TeacherProfessionalInfo = ({
       
       // Handle resume file upload if there's a new file
       if (resumeFile) {
-        // In a real implementation, you would upload the file to a storage service
-        // and get back a URL to store in the database
-        console.log("Uploading resume file:", resumeFile.name);
-        // formattedData.t_resume_url = "https://example.com/uploaded-resume.pdf";
+        toastDemoAction(
+          "Resume selected",
+          "File upload is not connected yet. The filename is kept in this session only."
+        );
       }
       
-      // If there's a teacherId, update the existing teacher
       if (teacherId) {
-        const success = await teacherService.updateTeacher(teacherId, formattedData);
-        
-        if (success) {
-          toast({
-            title: "Success",
-            description: "Professional information updated successfully",
-          });
-          
-          if (onSave) {
-            onSave(formattedData);
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to update professional information",
-            variant: "destructive",
-          });
-        }
-      } else {
-        // If there's no teacherId, this is a new teacher
-        if (onSave) {
+        const result = await teacherService.updateTeacher(teacherId, formattedData);
+        toastWriteResult("Professional information updated", result);
+        if (result.ok && onSave) {
           onSave(formattedData);
         }
-        
-        toast({
-          title: "Success",
-          description: "Professional information saved",
-        });
+      } else if (onSave) {
+        onSave(formattedData);
+        toastDemoAction("Professional information saved");
       }
     } catch (error) {
       console.error("Error saving professional information:", error);
@@ -452,7 +442,7 @@ const TeacherProfessionalInfo = ({
                         issueDate: undefined,
                         expiryDate: null,
                         certificateNumber: "",
-                      })
+                      } as unknown as ProfessionalInfoValues["certifications"][number])
                     }
                   >
                     <Plus className="mr-2 h-4 w-4" />

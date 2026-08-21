@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
+import type { Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
@@ -40,6 +41,7 @@ import {
 import { CalendarIcon, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
+import { toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { teacherService } from "@/services/teacherService";
 
@@ -144,22 +146,12 @@ const TeacherOnboarding = () => {
       
       // Call the service to create the teacher
       const result = await teacherService.createTeacher(teacherData);
-      
-      if (result) {
-        toast({
-          title: "Teacher registration successful",
-          description: "The teacher has been added to the system.",
-        });
-        
-        // Reset the form
+
+      toastWriteResult("Teacher registration submitted", result);
+
+      if (result.data) {
         form.reset();
         setCurrentStep(1);
-      } else {
-        toast({
-          title: "Registration failed",
-          description: "There was an error adding the teacher. Please try again.",
-          variant: "destructive",
-        });
       }
     } catch (error) {
       console.error("Error submitting teacher data:", error);
@@ -177,7 +169,7 @@ const TeacherOnboarding = () => {
   const nextStep = () => {
     const fieldsToValidate = getFieldsForStep(currentStep);
     
-    form.trigger(fieldsToValidate as any).then((isValid) => {
+    form.trigger(fieldsToValidate).then((isValid) => {
       if (isValid) {
         setCurrentStep(prev => Math.min(prev + 1, steps.length));
       }
@@ -190,7 +182,7 @@ const TeacherOnboarding = () => {
   };
   
   // Get the fields that should be validated for a specific step
-  const getFieldsForStep = (step: number) => {
+  const getFieldsForStep = (step: number): Path<TeacherFormValues>[] => {
     switch (step) {
       case 1:
         return ["name", "email", "phone", "address", "region"];

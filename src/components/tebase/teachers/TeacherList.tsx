@@ -63,6 +63,8 @@ import {
 } from "lucide-react";
 import { Teacher, teacherService } from "@/services/teacherService";
 import { Link } from "react-router-dom";
+import DemoBanner from "@/components/tebase/shared/DemoBanner";
+import { toastWriteResult } from "@/lib/persistence";
 
 interface TeacherListProps {
   teachers?: Teacher[];
@@ -79,104 +81,7 @@ const TeacherList = ({
   onUpdateTeacher,
   onDeleteTeacher,
 }: TeacherListProps) => {
-  // Default teachers data if none provided
-  const defaultTeachers: Teacher[] = [
-    {
-      id: "teach-001",
-      name: "John Smith",
-      email: "john.smith@example.com",
-      phone: "(555) 123-4567",
-      subjects: ["Mathematics", "Physics"],
-      status: "active",
-      lastBooking: "2023-06-15",
-      rating: 4.8,
-      favorite: true,
-      availability: "full-time",
-      region: "Hertfordshire",
-    },
-    {
-      id: "teach-002",
-      name: "Sarah Johnson",
-      email: "sarah.j@example.com",
-      phone: "(555) 987-6543",
-      subjects: ["English", "Literature"],
-      status: "inactive",
-      lastBooking: "2023-05-20",
-      rating: 4.5,
-      favorite: false,
-      availability: "part-time",
-      region: "Bedfordshire",
-    },
-    {
-      id: "teach-003",
-      name: "Michael Chen",
-      email: "m.chen@example.com",
-      phone: "(555) 456-7890",
-      subjects: ["Chemistry", "Biology"],
-      status: "active",
-      lastBooking: "2023-06-05",
-      rating: 4.9,
-      favorite: true,
-      availability: "full-time",
-      region: "Buckinghamshire",
-    },
-    {
-      id: "teach-004",
-      name: "Emily Rodriguez",
-      email: "emily.r@example.com",
-      phone: "(555) 234-5678",
-      subjects: ["Art", "History"],
-      status: "inactive",
-      lastBooking: "2023-05-28",
-      rating: 4.2,
-      favorite: false,
-      availability: "weekends",
-      region: "Greater London",
-    },
-    {
-      id: "teach-005",
-      name: "David Wilson",
-      email: "d.wilson@example.com",
-      phone: "(555) 876-5432",
-      subjects: ["Physical Education", "Health"],
-      status: "active",
-      lastBooking: "2023-06-12",
-      rating: 4.7,
-      favorite: false,
-      availability: "full-time",
-      region: "Essex",
-    },
-    {
-      id: "teach-006",
-      name: "Jennifer Lee",
-      email: "j.lee@example.com",
-      phone: "(555) 345-6789",
-      subjects: ["Music", "Drama"],
-      status: "pending",
-      lastBooking: "2023-06-08",
-      rating: 4.6,
-      favorite: true,
-      availability: "part-time",
-      region: "Kent",
-    },
-    {
-      id: "teach-007",
-      name: "Robert Taylor",
-      email: "r.taylor@example.com",
-      phone: "(555) 654-3210",
-      subjects: ["Computer Science", "Mathematics"],
-      status: "active",
-      lastBooking: "2023-06-01",
-      rating: 4.9,
-      favorite: false,
-      availability: "full-time",
-      region: "Surrey",
-    },
-  ];
-
-  const [teachers, setTeachers] = useState<Teacher[]>(
-    initialTeachers || defaultTeachers,
-  );
+  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -195,11 +100,11 @@ const TeacherList = ({
     email: "",
     phone: "",
     subjects: [] as string[],
-    status: "pending" as const,
-    availability: "part-time" as const,
+    status: "pending" as Teacher["status"],
+    availability: "part-time" as Teacher["availability"],
   });
 
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
 
   // Fetch teachers from the API
   useEffect(() => {
@@ -325,10 +230,12 @@ const TeacherList = ({
         favorite: false,
       };
 
-      const createdTeacher = await teacherService.createTeacher(teacherData);
-      
-      if (createdTeacher) {
-        setTeachers([...teachers, createdTeacher]);
+      const result = await teacherService.createTeacher(teacherData);
+
+      toastWriteResult("Teacher created", result);
+
+      if (result.data) {
+        setTeachers([...teachers, result.data]);
         setIsAddDialogOpen(false);
         setNewTeacher({
           name: "",
@@ -348,9 +255,9 @@ const TeacherList = ({
   // Handle toggle favorite
   const handleToggleFavorite = async (teacherId: string, isFavorite: boolean) => {
     try {
-      const success = await teacherService.toggleFavorite(teacherId, !isFavorite);
-      
-      if (success) {
+      const result = await teacherService.toggleFavorite(teacherId, !isFavorite);
+
+      if (result.ok) {
         setTeachers(
           teachers.map((teacher) =>
             teacher.id === teacherId
@@ -414,6 +321,8 @@ const TeacherList = ({
   };
 
   return (
+    <div className="space-y-4">
+    <DemoBanner />
     <div className="w-full bg-white rounded-lg shadow-sm border">
       <div className="p-4 border-b">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
@@ -990,6 +899,7 @@ const TeacherList = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,12 @@ import {
   FileText,
   Download,
 } from "lucide-react";
+import { toastDemoAction } from "@/lib/persistence";
+import {
+  extrasService,
+  type ItSystemLog,
+  type ItUser,
+} from "@/services/extrasService";
 
 const ITDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -61,140 +67,19 @@ const ITDashboard = () => {
   const [isDeleteUserOpen, setIsDeleteUserOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
+  const [users, setUsers] = useState<ItUser[]>([]);
+  const [systemLogs, setSystemLogs] = useState<ItSystemLog[]>([]);
+  const [systemStatus, setSystemStatus] = useState({
+    database: { status: "healthy", uptime: "—", lastBackup: "—" },
+    server: { status: "healthy", uptime: "—", load: "—" },
+    storage: { status: "healthy", used: "—", total: "—" },
+  });
 
-  // Mock users data
-  const users = [
-    {
-      id: "user-001",
-      name: "John Smith",
-      email: "john.smith@tebase.edu",
-      role: "Trainee Consultant",
-      lastLogin: "2023-06-15 09:45",
-      status: "active",
-      permissions: ["view_schools", "view_bookings"],
-    },
-    {
-      id: "user-002",
-      name: "Sarah Johnson",
-      email: "sarah.johnson@tebase.edu",
-      role: "Consultant",
-      lastLogin: "2023-06-14 16:30",
-      status: "active",
-      permissions: [
-        "view_schools",
-        "edit_schools",
-        "view_bookings",
-        "edit_bookings",
-      ],
-    },
-    {
-      id: "user-003",
-      name: "Michael Chen",
-      email: "michael.chen@tebase.edu",
-      role: "Senior Consultant",
-      lastLogin: "2023-06-10 11:20",
-      status: "active",
-      permissions: [
-        "view_schools",
-        "edit_schools",
-        "view_bookings",
-        "edit_bookings",
-        "view_reports",
-      ],
-    },
-    {
-      id: "user-004",
-      name: "Emily Rodriguez",
-      email: "emily.rodriguez@tebase.edu",
-      role: "Manager",
-      lastLogin: "2023-06-08 14:15",
-      status: "inactive",
-      permissions: [
-        "view_schools",
-        "view_bookings",
-        "view_reports",
-        "manage_consultants",
-      ],
-    },
-    {
-      id: "user-005",
-      name: "David Wilson",
-      email: "david.wilson@tebase.edu",
-      role: "Director",
-      lastLogin: "2023-06-12 10:30",
-      status: "locked",
-      permissions: [
-        "view_schools",
-        "view_bookings",
-        "view_reports",
-        "manage_consultants",
-        "system_settings",
-      ],
-    },
-  ];
-
-  // Mock system logs
-  const systemLogs = [
-    {
-      id: "log-001",
-      timestamp: "2023-06-15 10:45:23",
-      user: "Sarah Johnson",
-      action: "Reset password for user John Smith",
-      ipAddress: "192.168.1.105",
-      status: "success",
-    },
-    {
-      id: "log-002",
-      timestamp: "2023-06-15 09:30:12",
-      user: "System",
-      action: "Automated database backup",
-      ipAddress: "internal",
-      status: "success",
-    },
-    {
-      id: "log-003",
-      timestamp: "2023-06-14 16:42:56",
-      user: "Michael Chen",
-      action: "Changed permissions for user Emily Rodriguez",
-      ipAddress: "192.168.1.87",
-      status: "success",
-    },
-    {
-      id: "log-004",
-      timestamp: "2023-06-14 14:15:30",
-      user: "David Wilson",
-      action: "Failed login attempt",
-      ipAddress: "192.168.1.92",
-      status: "error",
-    },
-    {
-      id: "log-005",
-      timestamp: "2023-06-14 11:05:18",
-      user: "System",
-      action: "System update applied",
-      ipAddress: "internal",
-      status: "success",
-    },
-  ];
-
-  // Mock system status
-  const systemStatus = {
-    database: {
-      status: "healthy",
-      uptime: "99.98%",
-      lastBackup: "2023-06-15 03:00:00",
-    },
-    server: {
-      status: "healthy",
-      uptime: "99.95%",
-      load: "23%",
-    },
-    storage: {
-      status: "warning",
-      used: "78%",
-      total: "500GB",
-    },
-  };
+  useEffect(() => {
+    extrasService.getItUsers().then(setUsers);
+    extrasService.getItLogs().then(setSystemLogs);
+    extrasService.getItStatus().then(setSystemStatus);
+  }, []);
 
   // Filter users based on search term
   const filteredUsers = users.filter(
@@ -218,17 +103,20 @@ const ITDashboard = () => {
 
   // Confirm reset password
   const confirmResetPassword = () => {
-    // In a real app, this would call an API to reset the password
-    console.log(`Password reset for user ${selectedUser}: ${newPassword}`);
+    toastDemoAction(
+      "Password reset",
+      "Resetting another user's password needs a server-side admin API. Nothing was changed."
+    );
     setIsResetPasswordOpen(false);
     setNewPassword("");
     setSelectedUser(null);
   };
 
-  // Confirm delete user
   const confirmDeleteUser = () => {
-    // In a real app, this would call an API to delete the user
-    console.log(`User deleted: ${selectedUser}`);
+    toastDemoAction(
+      "User deleted",
+      "Deleting users needs a server-side admin API. Nothing was changed."
+    );
     setIsDeleteUserOpen(false);
     setSelectedUser(null);
   };

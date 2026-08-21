@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { isAdminRole } from "@/lib/roles";
 import {
   Users,
   LayoutDashboard,
@@ -15,6 +16,7 @@ import {
   Menu,
   Building,
   FileText,
+  Receipt,
   Clock,
   Briefcase,
   UserPlus,
@@ -53,13 +55,7 @@ const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
     navigate('/login');
   };
 
-  // Mock user data - in a real app, this would come from authentication
-  const currentUser = {
-    name: "Alex Johnson",
-    email: "alex@example.com",
-    role: "Director",
-    isAdmin: true,
-  };
+  const isAdmin = isAdminRole(user?.role);
 
   const navItems = [
     {
@@ -115,6 +111,12 @@ const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
       label: "Timesheets",
       icon: <FileText size={20} />,
       path: "/timesheets",
+    },
+    {
+      id: "invoices",
+      label: "Invoices",
+      icon: <Receipt size={20} />,
+      path: "/invoices",
     },
     {
       id: "vacancies",
@@ -259,7 +261,7 @@ const Sidebar = ({ collapsed = false, onToggle }: SidebarProps) => {
       <div className="border-t border-gray-200 py-4 px-3">
         <nav className="space-y-1">
           {/* IT Admin section - only visible to admins */}
-          {currentUser.isAdmin && (
+          {isAdmin && (
             <div className="mb-2">
               {collapsed ? null : (
                 <p className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">

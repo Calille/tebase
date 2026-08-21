@@ -64,6 +64,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import SchoolDetail from "./SchoolDetail";
 import { School, schoolService } from "@/services/schoolService";
+import DemoBanner from "@/components/tebase/shared/DemoBanner";
+import { toastWriteResult } from "@/lib/persistence";
 
 interface SchoolListProps {
   schools?: School[];
@@ -87,7 +89,7 @@ const SchoolList = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<keyof School>("name");
+  const [sortField, setSortField] = useState<string>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -99,121 +101,12 @@ const SchoolList = ({
     contactPerson: "",
     email: "",
     phone: "",
-    type: "primary" as const,
+    type: "primary",
     status: "new" as const,
     teachersNeeded: 0,
   });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [schoolToDelete, setSchoolToDelete] = useState<string | null>(null);
-
-  // Default schools data if none provided
-  const defaultSchools: School[] = [
-    {
-      id: "sch-001",
-      name: "Westfield High School",
-      address: "123 Education Ave",
-      city: "Manchester",
-      contactPerson: "Jane Wilson",
-      email: "j.wilson@westfield.edu",
-      phone: "(555) 123-4567",
-      type: "secondary",
-      status: "active",
-      lastBooking: "2023-06-15",
-      rating: 4.8,
-      favorite: true,
-      teachersNeeded: 3,
-    },
-    {
-      id: "sch-002",
-      name: "Oakridge Elementary",
-      address: "456 Learning Lane",
-      city: "Birmingham",
-      contactPerson: "Robert Brown",
-      email: "r.brown@oakridge.edu",
-      phone: "(555) 987-6543",
-      type: "primary",
-      status: "active",
-      lastBooking: "2023-06-10",
-      rating: 4.5,
-      favorite: false,
-      teachersNeeded: 2,
-    },
-    {
-      id: "sch-003",
-      name: "Riverside College",
-      address: "789 Academic Blvd",
-      city: "Liverpool",
-      contactPerson: "Sarah Chen",
-      email: "s.chen@riverside.edu",
-      phone: "(555) 456-7890",
-      type: "college",
-      status: "active",
-      lastBooking: "2023-06-05",
-      rating: 4.9,
-      favorite: true,
-      teachersNeeded: 5,
-    },
-    {
-      id: "sch-004",
-      name: "Sunshine Special School",
-      address: "101 Support Street",
-      city: "Leeds",
-      contactPerson: "Emily Rodriguez",
-      email: "e.rodriguez@sunshine.edu",
-      phone: "(555) 234-5678",
-      type: "special",
-      status: "inactive",
-      lastBooking: "2023-05-28",
-      rating: 4.2,
-      favorite: false,
-      teachersNeeded: 4,
-    },
-    {
-      id: "sch-005",
-      name: "Northside Academy",
-      address: "202 Learning Drive",
-      city: "Newcastle",
-      contactPerson: "David Wilson",
-      email: "d.wilson@northside.edu",
-      phone: "(555) 876-5432",
-      type: "secondary",
-      status: "active",
-      lastBooking: "2023-06-12",
-      rating: 4.7,
-      favorite: false,
-      teachersNeeded: 1,
-    },
-    {
-      id: "sch-006",
-      name: "Eastwood Primary",
-      address: "303 Education Road",
-      city: "Sheffield",
-      contactPerson: "Jennifer Lee",
-      email: "j.lee@eastwood.edu",
-      phone: "(555) 345-6789",
-      type: "primary",
-      status: "new",
-      lastBooking: "-",
-      rating: 0,
-      favorite: true,
-      teachersNeeded: 6,
-    },
-    {
-      id: "sch-007",
-      name: "Tech Institute",
-      address: "404 Innovation Way",
-      city: "Bristol",
-      contactPerson: "Robert Taylor",
-      email: "r.taylor@techinstitute.edu",
-      phone: "(555) 654-3210",
-      type: "college",
-      status: "active",
-      lastBooking: "2023-06-01",
-      rating: 4.9,
-      favorite: false,
-      teachersNeeded: 3,
-    },
-  ];
 
   const [itemsPerPage] = useState(10);
 
@@ -247,33 +140,30 @@ const SchoolList = ({
 
   // Filter schools based on search term and filters
   const filteredSchools = schools.filter((school) => {
+    const city = school.address?.city || "";
+    const contactName = school.primaryContact?.name || "";
     const matchesSearch =
       searchTerm === "" ||
       school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      school.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      school.contactPerson.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === "all" || school.status === statusFilter;
+      city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contactName.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesType = typeFilter === "all" || school.type === typeFilter;
 
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesType;
   });
 
   // Sort schools
   const sortedSchools = [...filteredSchools].sort((a, b) => {
-    if (sortField === "rating" || sortField === "teachersNeeded") {
-      return sortDirection === "asc"
-        ? a[sortField] - b[sortField]
-        : b[sortField] - a[sortField];
-    } else {
-      const aValue = String(a[sortField]).toLowerCase();
-      const bValue = String(b[sortField]).toLowerCase();
-      return sortDirection === "asc"
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    }
+    const aValue = String(
+      sortField === "city" ? a.address?.city || "" : (a as unknown as Record<string, unknown>)[sortField] ?? ""
+    ).toLowerCase();
+    const bValue = String(
+      sortField === "city" ? b.address?.city || "" : (b as unknown as Record<string, unknown>)[sortField] ?? ""
+    ).toLowerCase();
+    return sortDirection === "asc"
+      ? aValue.localeCompare(bValue)
+      : bValue.localeCompare(aValue);
   });
 
   // Paginate schools
@@ -284,7 +174,7 @@ const SchoolList = ({
   );
 
   // Handle sort
-  const handleSort = (field: keyof School) => {
+  const handleSort = (field: string) => {
     if (field === sortField) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -324,10 +214,14 @@ const SchoolList = ({
         favorite: false,
       };
 
-      const createdSchool = await schoolService.createSchool(schoolData);
-      
-      if (createdSchool) {
-        setSchools([...schools, createdSchool]);
+      const result = await schoolService.createSchool(
+        schoolData as Record<string, unknown>
+      );
+
+      toastWriteResult("School created", result);
+
+      if (result.data) {
+        setSchools([...schools, result.data]);
         setIsAddDialogOpen(false);
         setNewSchool({
           name: "",
@@ -350,9 +244,9 @@ const SchoolList = ({
   // Handle toggle favorite
   const handleToggleFavorite = async (schoolId: string, isFavorite: boolean) => {
     try {
-      const success = await schoolService.toggleFavorite(schoolId, !isFavorite);
-      
-      if (success) {
+      const result = await schoolService.toggleFavorite(schoolId, !isFavorite);
+
+      if (result.ok) {
         setSchools(
           schools.map((school) =>
             school.id === schoolId
@@ -380,6 +274,7 @@ const SchoolList = ({
         try {
           await schoolService.deleteSchool(schoolToDelete);
           setSchools(schools.filter((school) => school.id !== schoolToDelete));
+          toastWriteResult("School deleted", { ok: true, persisted: false });
         } catch (error) {
           console.error("Error deleting school:", error);
         }
@@ -390,7 +285,7 @@ const SchoolList = ({
   };
 
   // Get status badge
-  const getStatusBadge = (status: School["status"]) => {
+  const getStatusBadge = (status?: string) => {
     switch (status) {
       case "active":
         return <Badge className="bg-green-100 text-green-800">Active</Badge>;
@@ -444,6 +339,8 @@ const SchoolList = ({
   }
 
   return (
+    <div className="space-y-4">
+    <DemoBanner />
     <div className="w-full bg-white rounded-lg shadow-sm border">
       <div className="p-4 border-b">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
@@ -579,7 +476,7 @@ const SchoolList = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleToggleFavorite(school.id, school.favorite);
+                          handleToggleFavorite(school.id, school.favorite ?? false);
                         }}
                         className="text-gray-400 hover:text-yellow-400 transition-colors"
                       >
@@ -595,30 +492,21 @@ const SchoolList = ({
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <MapPin className="h-3 w-3 text-gray-400" />
-                      <span>{school.city}</span>
+                      <span>{school.address?.city}</span>
                     </div>
                   </TableCell>
                   <TableCell>{getTypeBadge(school.type)}</TableCell>
-                  <TableCell>{getStatusBadge(school.status)}</TableCell>
+                  <TableCell>{getStatusBadge()}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Users className="h-4 w-4 text-blue-500" />
                       <span className="font-medium">
-                        {school.teachersNeeded}
+                        {school.numberOfStudents}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    {school.rating > 0 ? (
-                      <div className="flex items-center justify-end">
-                        <span className="font-medium">
-                          {school.rating.toFixed(1)}
-                        </span>
-                        <Star className="h-4 w-4 ml-1 text-yellow-400 fill-yellow-400" />
-                      </div>
-                    ) : (
-                      <span className="text-gray-400 text-sm">No ratings</span>
-                    )}
+                    <span className="text-gray-400 text-sm">No ratings</span>
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-1">
@@ -650,7 +538,7 @@ const SchoolList = ({
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
-                              window.open(`mailto:${school.email}`, "_blank");
+                              window.open(`mailto:${school.primaryContact?.email || ""}`, "_blank");
                             }}
                           >
                             <Mail className="h-4 w-4 mr-2" />
@@ -873,9 +761,9 @@ const SchoolList = ({
               </label>
               <Select
                 value={newSchool.type}
-                onValueChange={(
-                  value: "primary" | "secondary" | "college" | "special",
-                ) => setNewSchool({ ...newSchool, type: value })}
+                onValueChange={(value) =>
+                  setNewSchool({ ...newSchool, type: value })
+                }
               >
                 <SelectTrigger id="type">
                   <SelectValue placeholder="Select type" />
@@ -937,6 +825,7 @@ const SchoolList = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 };

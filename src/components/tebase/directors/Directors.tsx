@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,8 +19,22 @@ import {
   AlertTriangle,
   MapPin,
 } from "lucide-react";
+import { extrasService, formatGbpCompact, type OpsSnapshot } from "@/services/extrasService";
+import type { SeedAlarm } from "@/mocks/types";
 
 const Directors = () => {
+  const [snapshot, setSnapshot] = useState<OpsSnapshot | null>(null);
+  const [alarms, setAlarms] = useState<SeedAlarm[]>([]);
+
+  useEffect(() => {
+    extrasService.getOpsSnapshot().then(setSnapshot);
+    extrasService.getAlarms().then(setAlarms);
+  }, []);
+
+  const revenue = snapshot ? formatGbpCompact(snapshot.chargeTotal) : "—";
+  const teachers = snapshot ? String(snapshot.activeTeacherCount) : "—";
+  const schools = snapshot ? String(snapshot.schoolCount) : "—";
+  const margin = snapshot ? `${snapshot.marginPercent}%` : "—";
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
       <Tabs defaultValue="dashboard" className="w-full">
@@ -42,8 +56,8 @@ const Directors = () => {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl font-bold">£4.8M</p>
-                    <p className="text-xs text-gray-500">Year to date</p>
+                    <p className="text-3xl font-bold">{revenue}</p>
+                    <p className="text-xs text-gray-500">Charge across seeded booking history</p>
                   </div>
                   <div className="p-3 bg-green-50 rounded-full">
                     <DollarSign className="h-6 w-6 text-green-600" />
@@ -66,7 +80,7 @@ const Directors = () => {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl font-bold">1,248</p>
+                    <p className="text-3xl font-bold">{teachers}</p>
                     <p className="text-xs text-gray-500">Active teachers</p>
                   </div>
                   <div className="p-3 bg-blue-50 rounded-full">
@@ -90,7 +104,7 @@ const Directors = () => {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl font-bold">342</p>
+                    <p className="text-3xl font-bold">{schools}</p>
                     <p className="text-xs text-gray-500">Active partnerships</p>
                   </div>
                   <div className="p-3 bg-purple-50 rounded-full">
@@ -114,7 +128,7 @@ const Directors = () => {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl font-bold">24.8%</p>
+                    <p className="text-3xl font-bold">{margin}</p>
                     <p className="text-xs text-gray-500">Year to date</p>
                   </div>
                   <div className="p-3 bg-amber-50 rounded-full">
@@ -194,58 +208,32 @@ const Directors = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 border rounded-lg flex items-start gap-4 bg-red-50">
-                  <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
-                  <div>
-                    <h3 className="font-medium">Critical Staff Shortage</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Projected teacher shortage in the North region for the
-                      upcoming quarter. HR department has been notified and is
-                      implementing recruitment strategies.
-                    </p>
-                    <div className="mt-2">
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
+                {alarms.slice(0, 4).map((alarm) => (
+                  <div
+                    key={alarm.id}
+                    className={`p-4 border rounded-lg flex items-start gap-4 ${
+                      alarm.priority === "critical"
+                        ? "bg-red-50"
+                        : alarm.priority === "high"
+                          ? "bg-amber-50"
+                          : "bg-green-50"
+                    }`}
+                  >
+                    <AlertTriangle
+                      className={`h-5 w-5 mt-0.5 ${
+                        alarm.priority === "critical"
+                          ? "text-red-500"
+                          : alarm.priority === "high"
+                            ? "text-amber-500"
+                            : "text-green-500"
+                      }`}
+                    />
+                    <div>
+                      <h3 className="font-medium">{alarm.title}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{alarm.description}</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="p-4 border rounded-lg flex items-start gap-4 bg-amber-50">
-                  <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
-                  <div>
-                    <h3 className="font-medium">Regulatory Change</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      New education regulations coming into effect next quarter.
-                      Compliance team is preparing necessary adjustments to our
-                      operations.
-                    </p>
-                    <div className="mt-2">
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 border rounded-lg flex items-start gap-4 bg-green-50">
-                  <TrendingUp className="h-5 w-5 text-green-500 mt-0.5" />
-                  <div>
-                    <h3 className="font-medium">
-                      Market Expansion Opportunity
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Analysis shows potential for expansion into the Southwest
-                      region. Business development team has prepared a detailed
-                      proposal.
-                    </p>
-                    <div className="mt-2">
-                      <Button variant="outline" size="sm">
-                        View Proposal
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>

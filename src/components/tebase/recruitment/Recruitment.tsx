@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,132 +42,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-interface Applicant {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  position: string;
-  experience: string;
-  status: "pending" | "review" | "interview" | "approved" | "rejected";
-  appliedDate: string;
-  avatar: string;
-  resumeUrl?: string;
-}
+import {
+  extrasService,
+  type RecruitmentApplicant as Applicant,
+} from "@/services/extrasService";
 
 const Recruitment = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("applicants");
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [jobPostings, setJobPostings] = useState<
+    Awaited<ReturnType<typeof extrasService.getJobPostings>>
+  >([]);
 
-  // Sample data for applicants
-  const applicants: Applicant[] = [
-    {
-      id: "app-001",
-      name: "Jessica Taylor",
-      email: "jessica.taylor@example.com",
-      phone: "(555) 123-4567",
-      position: "Mathematics Teacher",
-      status: "review",
-      appliedDate: "2023-06-10",
-      experience: "5 years",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jessica",
-      resumeUrl: "#",
-    },
-    {
-      id: "app-002",
-      name: "Robert Brown",
-      email: "robert.brown@example.com",
-      phone: "(555) 234-5678",
-      position: "Science Teacher",
-      status: "interview",
-      appliedDate: "2023-06-05",
-      experience: "3 years",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=robert",
-      resumeUrl: "#",
-    },
-    {
-      id: "app-003",
-      name: "Amanda Lee",
-      email: "amanda.lee@example.com",
-      phone: "(555) 345-6789",
-      position: "English Teacher",
-      status: "pending",
-      appliedDate: "2023-06-12",
-      experience: "2 years",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=amanda",
-      resumeUrl: "#",
-    },
-    {
-      id: "app-004",
-      name: "Michael Wilson",
-      email: "michael.wilson@example.com",
-      phone: "(555) 456-7890",
-      position: "Physical Education Teacher",
-      status: "approved",
-      appliedDate: "2023-06-01",
-      experience: "7 years",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael",
-      resumeUrl: "#",
-    },
-    {
-      id: "app-005",
-      name: "Sarah Johnson",
-      email: "sarah.johnson@example.com",
-      phone: "(555) 567-8901",
-      position: "Art Teacher",
-      status: "rejected",
-      appliedDate: "2023-06-03",
-      experience: "4 years",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-      resumeUrl: "#",
-    },
-  ];
-
-  // Sample data for job postings
-  const jobPostings = [
-    {
-      id: "job-001",
-      title: "Mathematics Teacher",
-      department: "Secondary Education",
-      type: "Full-time",
-      location: "Manchester",
-      postedDate: "2023-06-01",
-      applicants: 12,
-      status: "active",
-    },
-    {
-      id: "job-002",
-      title: "Science Teacher",
-      department: "Secondary Education",
-      type: "Full-time",
-      location: "Liverpool",
-      postedDate: "2023-06-03",
-      applicants: 8,
-      status: "active",
-    },
-    {
-      id: "job-003",
-      title: "English Teacher",
-      department: "Primary Education",
-      type: "Part-time",
-      location: "Birmingham",
-      postedDate: "2023-06-05",
-      applicants: 5,
-      status: "active",
-    },
-    {
-      id: "job-004",
-      title: "Physical Education Teacher",
-      department: "Secondary Education",
-      type: "Full-time",
-      location: "Leeds",
-      postedDate: "2023-05-25",
-      applicants: 10,
-      status: "closed",
-    },
-  ];
+  useEffect(() => {
+    extrasService.getApplicants().then(setApplicants);
+    extrasService.getJobPostings().then(setJobPostings);
+  }, []);
 
   // Filter applicants based on search term and status filter
   const filteredApplicants = applicants.filter((applicant) => {

@@ -30,9 +30,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 import { Toaster } from "@/components/ui/toaster";
 import { Loader2 } from "lucide-react";
-import { teacherService } from "@/services/teacherService";
+import { teacherService, TeacherFormSeed } from "@/services/teacherService";
 
 // Define the form schema with Zod
 const availabilitySchema = z.object({
@@ -73,8 +74,8 @@ type AvailabilityValues = z.infer<typeof availabilitySchema>;
 
 interface TeacherAvailabilityProps {
   teacherId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: TeacherFormSeed | null;
+  onSave?: (data: TeacherFormSeed) => void;
   readOnly?: boolean;
 }
 
@@ -96,14 +97,18 @@ const TeacherAvailability = ({
   // Helper function to convert availability schedule to form values
   const getInitialAvailability = () => {
     const schedule = initialData?.availabilitySchedule || {};
+    const day = (key: string): string[] => {
+      const value = schedule[key];
+      return Array.isArray(value) ? value.map(String) : [];
+    };
     return {
-      monday: schedule.monday || [],
-      tuesday: schedule.tuesday || [],
-      wednesday: schedule.wednesday || [],
-      thursday: schedule.thursday || [],
-      friday: schedule.friday || [],
-      saturday: schedule.saturday || [],
-      sunday: schedule.sunday || [],
+      monday: day("monday"),
+      tuesday: day("tuesday"),
+      wednesday: day("wednesday"),
+      thursday: day("thursday"),
+      friday: day("friday"),
+      saturday: day("saturday"),
+      sunday: day("sunday"),
     };
   };
 
@@ -115,9 +120,9 @@ const TeacherAvailability = ({
       ...getInitialAvailability(),
       preferredLocations: initialData?.preferredLocations?.join(", ") || "",
       maxTravelDistance: initialData?.maxTravelDistance || 10,
-      travelDistanceUnit: initialData?.travelDistanceUnit || "miles",
+      travelDistanceUnit: (initialData?.travelDistanceUnit as AvailabilityValues["travelDistanceUnit"]) || "miles",
       noticePeriod: initialData?.noticePeriod || 24,
-      noticePeriodUnit: initialData?.noticePeriodUnit || "hours",
+      noticePeriodUnit: (initialData?.noticePeriodUnit as AvailabilityValues["noticePeriodUnit"]) || "hours",
       availabilityNotes: initialData?.availabilityNotes || "",
     },
   });
@@ -160,36 +165,15 @@ const TeacherAvailability = ({
         t_availability_notes: data.availabilityNotes,
       };
       
-      // If there's a teacherId, update the existing teacher
       if (teacherId) {
-        const success = await teacherService.updateTeacher(teacherId, formattedData);
-        
-        if (success) {
-          toast({
-            title: "Success",
-            description: "Availability information updated successfully",
-          });
-          
-          if (onSave) {
-            onSave(formattedData);
-          }
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to update availability information",
-            variant: "destructive",
-          });
-        }
-      } else {
-        // If there's no teacherId, this is a new teacher
-        if (onSave) {
+        const result = await teacherService.updateTeacher(teacherId, formattedData);
+        toastWriteResult("Availability updated", result);
+        if (result.ok && onSave) {
           onSave(formattedData);
         }
-        
-        toast({
-          title: "Success",
-          description: "Availability information saved",
-        });
+      } else if (onSave) {
+        onSave(formattedData);
+        toastDemoAction("Availability saved");
       }
     } catch (error) {
       console.error("Error saving availability information:", error);

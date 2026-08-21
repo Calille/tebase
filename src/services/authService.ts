@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { errorMessage } from '@/lib/errors';
 
 export interface User {
   id: string;
@@ -12,34 +13,17 @@ export interface User {
 export const authService = {
   async getCurrentUser(): Promise<User | null> {
     try {
-      console.log("Getting current user from Supabase...");
       const { data: { user }, error } = await supabase.auth.getUser();
       
-      if (error) {
-        console.error("Error in getUser:", error);
+      if (error || !user) {
         return null;
       }
       
-      console.log("Supabase auth user:", user);
-      
-      if (!user) {
-        console.log("No authenticated user found");
-        return null;
-      }
-      
-      // Get the user profile from the profiles table
-      console.log("Fetching user profile for ID:", user.id);
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
-        
-      if (profileError) {
-        console.error("Error fetching profile:", profileError);
-      }
-      
-      console.log("User profile:", profile);
       
       return {
         id: user.id,
@@ -110,8 +94,8 @@ export const authService = {
       };
       
       return { user, error: null };
-    } catch (error: any) {
-      return { user: null, error: error.message || 'An error occurred during sign in' };
+    } catch (error) {
+      return { user: null, error: errorMessage(error, 'An error occurred during sign in') };
     }
   },
   
@@ -170,8 +154,8 @@ export const authService = {
       };
       
       return { user, error: null };
-    } catch (error: any) {
-      return { user: null, error: error.message || 'An error occurred during sign up' };
+    } catch (error) {
+      return { user: null, error: errorMessage(error, 'An error occurred during sign up') };
     }
   },
   
@@ -184,8 +168,8 @@ export const authService = {
       }
       
       return { error: null };
-    } catch (error: any) {
-      return { error: error.message || 'An error occurred during sign out' };
+    } catch (error) {
+      return { error: errorMessage(error, 'An error occurred during sign out') };
     }
   },
   
@@ -205,15 +189,22 @@ export const authService = {
         }
       }
       
+      const payload: {
+        username?: string;
+        name?: string;
+        avatar_url?: string;
+        updated_at: Date;
+      } = {
+        updated_at: new Date()
+      };
+
+      if (updates.username !== undefined) payload.username = updates.username;
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.avatar_url !== undefined) payload.avatar_url = updates.avatar_url;
+
       const { error } = await supabase
         .from('profiles')
-        .update({
-          username: updates.username,
-          name: updates.name,
-          role: updates.role,
-          avatar_url: updates.avatar_url,
-          updated_at: new Date()
-        })
+        .update(payload)
         .eq('id', userId);
       
       if (error) {
@@ -224,8 +215,8 @@ export const authService = {
       const updatedUser = await this.getCurrentUser();
       
       return { user: updatedUser, error: null };
-    } catch (error: any) {
-      return { user: null, error: error.message || 'An error occurred updating profile' };
+    } catch (error) {
+      return { user: null, error: errorMessage(error, 'An error occurred updating profile') };
     }
   },
   
@@ -240,8 +231,8 @@ export const authService = {
       }
       
       return { error: null };
-    } catch (error: any) {
-      return { error: error.message || 'An error occurred sending reset password email' };
+    } catch (error) {
+      return { error: errorMessage(error, 'An error occurred sending reset password email') };
     }
   },
   
@@ -256,8 +247,8 @@ export const authService = {
       }
       
       return { error: null };
-    } catch (error: any) {
-      return { error: error.message || 'An error occurred updating password' };
+    } catch (error) {
+      return { error: errorMessage(error, 'An error occurred updating password') };
     }
   }
 }; 

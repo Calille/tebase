@@ -1,10 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Search,
   Plus,
@@ -12,100 +18,43 @@ import {
   Mail,
   Users,
   UserCog,
-  BarChart3,
   Calendar,
   MessageSquare,
 } from "lucide-react";
+import DemoBanner from "@/components/tebase/shared/DemoBanner";
+import { toastDemoAction } from "@/lib/persistence";
+import {
+  extrasService,
+  type TeamLeaderCard as TeamLeader,
+} from "@/services/extrasService";
 
-interface TeamLeader {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-  phone: string;
-  avatar: string;
-  department: string;
-  teamSize: number;
-  performance: number;
-  status: "active" | "on leave" | "training";
+function formatDays(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 const TeamLeaders = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [teamLeaders, setTeamLeaders] = useState<TeamLeader[]>([]);
 
-  // Sample team leaders data
-  const teamLeaders: TeamLeader[] = [
-    {
-      id: "tl-001",
-      name: "Sarah Johnson",
-      role: "Senior Team Leader",
-      email: "s.johnson@tebase.edu",
-      phone: "+44 161 234 5678",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-      department: "Secondary Education",
-      teamSize: 12,
-      performance: 92,
-      status: "active",
-    },
-    {
-      id: "tl-002",
-      name: "Michael Chen",
-      role: "Team Leader",
-      email: "m.chen@tebase.edu",
-      phone: "+44 161 345 6789",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael",
-      department: "Primary Education",
-      teamSize: 8,
-      performance: 88,
-      status: "active",
-    },
-    {
-      id: "tl-003",
-      name: "Emily Rodriguez",
-      role: "Team Leader",
-      email: "e.rodriguez@tebase.edu",
-      phone: "+44 161 456 7890",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emily",
-      department: "Special Education",
-      teamSize: 6,
-      performance: 95,
-      status: "on leave",
-    },
-    {
-      id: "tl-004",
-      name: "David Wilson",
-      role: "Senior Team Leader",
-      email: "d.wilson@tebase.edu",
-      phone: "+44 161 567 8901",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=david",
-      department: "Higher Education",
-      teamSize: 15,
-      performance: 90,
-      status: "active",
-    },
-    {
-      id: "tl-005",
-      name: "Jessica Taylor",
-      role: "Team Leader",
-      email: "j.taylor@tebase.edu",
-      phone: "+44 161 678 9012",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jessica",
-      department: "Primary Education",
-      teamSize: 7,
-      performance: 86,
-      status: "training",
-    },
-  ];
+  useEffect(() => {
+    extrasService.getTeamLeaders().then(setTeamLeaders);
+  }, []);
 
-  // Filter team leaders based on search term
-  const filteredTeamLeaders = teamLeaders.filter(
-    (leader) =>
-      leader.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      leader.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      leader.role.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const query = searchTerm.trim().toLowerCase();
+  const filteredTeamLeaders = teamLeaders.filter((leader) => {
+    if (!query) return true;
+    const haystack = [
+      leader.name,
+      leader.department,
+      leader.role,
+      leader.email,
+      ...leader.members.flatMap((member) => [member.name, member.role, member.email]),
+    ]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
+  });
 
-  // Get status badge
   const getStatusBadge = (status: TeamLeader["status"]) => {
     switch (status) {
       case "active":
@@ -120,168 +69,137 @@ const TeamLeaders = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <div className="relative w-full md:w-64">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
+      <DemoBanner message="North and South desks from the demo seed, including coordinators who do not take bookings." />
+
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="relative w-full md:w-80">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search team leaders..."
+            placeholder="Search leaders or members..."
             className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button className="flex items-center gap-1">
+        <Button
+          className="flex items-center gap-1"
+          onClick={() => toastDemoAction("Add team leader")}
+        >
           <Plus className="h-4 w-4" />
           Add Team Leader
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {filteredTeamLeaders.map((leader) => (
           <Card key={leader.id} className="bg-white overflow-hidden">
-            <CardHeader className="pb-0">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                    <AvatarImage src={leader.avatar} alt={leader.name} />
-                    <AvatarFallback>{leader.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">{leader.name}</CardTitle>
-                    <p className="text-sm text-gray-500">{leader.role}</p>
-                  </div>
+            <CardHeader className="pb-4">
+              <div className="flex justify-between items-start gap-3">
+                <div>
+                  <p className="text-sm text-gray-500">{leader.department}</p>
+                  <CardTitle className="text-xl">{leader.name}</CardTitle>
+                  <p className="text-sm text-gray-500">{leader.role}</p>
                 </div>
                 {getStatusBadge(leader.status)}
               </div>
             </CardHeader>
-            <CardContent className="pt-4">
-              <Tabs defaultValue="info" className="w-full">
-                <TabsList className="w-full mb-4">
-                  <TabsTrigger value="info" className="flex-1">
-                    Info
-                  </TabsTrigger>
-                  <TabsTrigger value="team" className="flex-1">
-                    Team
-                  </TabsTrigger>
-                  <TabsTrigger value="performance" className="flex-1">
-                    Performance
-                  </TabsTrigger>
-                </TabsList>
+            <CardContent className="space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm">
+                <a
+                  href={`mailto:${leader.email}`}
+                  className="inline-flex items-center gap-2 text-blue-600 hover:underline"
+                >
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  {leader.email}
+                </a>
+                <a
+                  href={`tel:${leader.phone.replace(/\s/g, "")}`}
+                  className="inline-flex items-center gap-2 text-blue-600 hover:underline"
+                >
+                  <Phone className="h-4 w-4 text-gray-500" />
+                  {leader.phone}
+                </a>
+              </div>
 
-                <TabsContent value="info" className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <a
-                      href={`mailto:${leader.email}`}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {leader.email}
-                    </a>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <Users className="h-3.5 w-3.5" />
+                    Members
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <a
-                      href={`tel:${leader.phone}`}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {leader.phone}
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <UserCog className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{leader.department}</span>
-                  </div>
-                  <div className="flex justify-between mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1"
-                    >
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      Message
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1"
-                    >
-                      <Calendar className="h-3.5 w-3.5" />
-                      Schedule
-                    </Button>
-                  </div>
-                </TabsContent>
+                  <p className="mt-1 text-lg font-semibold">{leader.teamSize}</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500">This week</p>
+                  <p className="mt-1 text-lg font-semibold">{leader.bookingsThisWeek}</p>
+                  <p className="text-xs text-gray-500">bookings</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500">Days booked</p>
+                  <p className="mt-1 text-lg font-semibold">{formatDays(leader.daysThisWeek)}</p>
+                </div>
+              </div>
 
-                <TabsContent value="team" className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium">Team Size:</span>
-                    </div>
-                    <span className="font-bold">{leader.teamSize} members</span>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <h4 className="text-sm font-medium mb-2">
-                      Team Composition
-                    </h4>
-                    <div className="flex gap-1">
-                      {Array.from({ length: Math.min(5, leader.teamSize) }).map(
-                        (_, i) => (
-                          <Avatar
-                            key={i}
-                            className="h-8 w-8 border border-white"
-                          >
-                            <AvatarImage
-                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=team${leader.id}${i}`}
-                            />
-                            <AvatarFallback>T</AvatarFallback>
-                          </Avatar>
-                        ),
-                      )}
-                      {leader.teamSize > 5 && (
-                        <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium">
-                          +{leader.teamSize - 5}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full mt-2">
-                    View Full Team
-                  </Button>
-                </TabsContent>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  onClick={() => toastDemoAction(`Message ${leader.name}`)}
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Message
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  onClick={() => toastDemoAction(`Schedule ${leader.name}`)}
+                >
+                  <Calendar className="h-3.5 w-3.5" />
+                  Schedule
+                </Button>
+              </div>
 
-                <TabsContent value="performance" className="space-y-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">
-                      Performance Score
-                    </span>
-                    <span className="font-bold text-lg">
-                      {leader.performance}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div
-                      className="bg-green-600 h-2.5 rounded-full"
-                      style={{ width: `${leader.performance}%` }}
-                    ></div>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>0%</span>
-                    <span>50%</span>
-                    <span>100%</span>
-                  </div>
-                  <div className="flex justify-center mt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1"
-                    >
-                      <BarChart3 className="h-3.5 w-3.5" />
-                      View Detailed Report
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
+              <div>
+                <h4 className="text-sm font-medium mb-2">Desk members</h4>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead className="hidden md:table-cell">Email</TableHead>
+                        <TableHead className="hidden lg:table-cell">Phone</TableHead>
+                        <TableHead className="text-right">This week</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leader.members.map((member) => (
+                        <TableRow key={member.id}>
+                          <TableCell>
+                            <div className="font-medium">{member.name}</div>
+                            <div className="text-xs text-gray-500 md:hidden">{member.email}</div>
+                          </TableCell>
+                          <TableCell className="text-gray-600">{member.role}</TableCell>
+                          <TableCell className="hidden md:table-cell text-gray-600">
+                            {member.email}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-gray-600">
+                            {member.phone}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {member.bookingsThisWeek}
+                            <span className="text-gray-400"> / </span>
+                            {formatDays(member.daysThisWeek)}d
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}

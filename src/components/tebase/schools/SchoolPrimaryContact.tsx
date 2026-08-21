@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { School } from "@/services/schoolService";
 
 // Define the form schema
 const primaryContactSchema = z.object({
@@ -33,8 +34,8 @@ type PrimaryContactValues = z.infer<typeof primaryContactSchema>;
 
 interface SchoolPrimaryContactProps {
   schoolId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: Partial<School>;
+  onSave?: (data: PrimaryContactValues) => void;
   readOnly?: boolean;
 }
 

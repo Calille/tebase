@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -34,90 +34,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { extrasService, type HrApplication, type HrEmployee } from "@/services/extrasService";
 
 const HR = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [employees, setEmployees] = useState<HrEmployee[]>([]);
+  const [applications, setApplications] = useState<HrApplication[]>([]);
 
-  // Sample employee data
-  const employees = [
-    {
-      id: "emp-001",
-      name: "John Smith",
-      position: "Mathematics Teacher",
-      department: "Secondary Education",
-      status: "active",
-      joinDate: "2021-05-15",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=john",
-    },
-    {
-      id: "emp-002",
-      name: "Sarah Johnson",
-      position: "English Teacher",
-      department: "Primary Education",
-      status: "active",
-      joinDate: "2020-09-01",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-    },
-    {
-      id: "emp-003",
-      name: "Michael Chen",
-      position: "Science Teacher",
-      department: "Secondary Education",
-      status: "on leave",
-      joinDate: "2019-11-10",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=michael",
-    },
-    {
-      id: "emp-004",
-      name: "Emily Rodriguez",
-      position: "Art Teacher",
-      department: "Special Education",
-      status: "active",
-      joinDate: "2022-01-20",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emily",
-    },
-    {
-      id: "emp-005",
-      name: "David Wilson",
-      position: "Physical Education Teacher",
-      department: "Primary Education",
-      status: "inactive",
-      joinDate: "2018-08-15",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=david",
-    },
-  ];
-
-  // Sample applications data
-  const applications = [
-    {
-      id: "app-001",
-      name: "Jessica Taylor",
-      position: "Mathematics Teacher",
-      status: "review",
-      appliedDate: "2023-06-10",
-      experience: "5 years",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=jessica",
-    },
-    {
-      id: "app-002",
-      name: "Robert Brown",
-      position: "Science Teacher",
-      status: "interview",
-      appliedDate: "2023-06-05",
-      experience: "3 years",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=robert",
-    },
-    {
-      id: "app-003",
-      name: "Amanda Lee",
-      position: "English Teacher",
-      status: "pending",
-      appliedDate: "2023-06-12",
-      experience: "2 years",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=amanda",
-    },
-  ];
+  useEffect(() => {
+    extrasService.getHrEmployees().then(setEmployees);
+    extrasService.getHrApplications().then(setApplications);
+  }, []);
 
   // Filter employees based on search term and status filter
   const filteredEmployees = employees.filter((employee) => {

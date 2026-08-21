@@ -40,10 +40,14 @@ const toastVariants = cva(
 )
 
 const Toast = React.forwardRef<
-  React.ElementRef<typeof ToastPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
-    VariantProps<typeof toastVariants>
->(({ className, variant, ...props }, ref) => {
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> &
+    VariantProps<typeof toastVariants> & {
+      onClose?: () => void;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+    }
+>(({ className, variant, onClose, open, onOpenChange, ...props }, ref) => {
   return (
     <div
       ref={ref}
@@ -56,10 +60,10 @@ const Toast = React.forwardRef<
       {...props}
     >
       {props.children}
-      {props.onClose && (
+      {onClose && (
         <button
           className="absolute right-2 top-2 rounded-md p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          onClick={props.onClose}
+          onClick={onClose}
         >
           <X className="h-4 w-4" />
         </button>

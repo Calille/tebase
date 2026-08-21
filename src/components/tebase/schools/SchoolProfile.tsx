@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, ArrowLeft, Save } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
-import { schoolService } from "@/services/schoolService";
+import { schoolService, School } from "@/services/schoolService";
+import DemoBanner from "@/components/tebase/shared/DemoBanner";
+import { toastDemoAction, toastWriteResult } from "@/lib/persistence";
 
 // Import all school information components
 import SchoolBasicInfo from "./SchoolBasicInfo";
@@ -20,7 +22,7 @@ import SchoolDocuments from "./SchoolDocuments";
 export interface SchoolProfileProps {
   schoolId?: string;
   onBack: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: School) => void;
 }
 
 interface DocumentType {
@@ -34,7 +36,7 @@ const SchoolProfile: React.FC<SchoolProfileProps> = ({ schoolId, onBack, onSave 
   const [activeTab, setActiveTab] = useState("basic-info");
   const [loading, setLoading] = useState(!!schoolId);
   const [saving, setSaving] = useState(false);
-  const [schoolData, setSchoolData] = useState<any>(null);
+  const [schoolData, setSchoolData] = useState<School | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,7 +48,11 @@ const SchoolProfile: React.FC<SchoolProfileProps> = ({ schoolId, onBack, onSave 
 
       try {
         const data = await schoolService.getSchoolById(schoolId);
-        setSchoolData(data);
+        if (data) {
+          setSchoolData(data);
+        } else {
+          setError("School not found");
+        }
       } catch (err) {
         console.error("Error fetching school data:", err);
         setError("Failed to load school data");
@@ -63,33 +69,25 @@ const SchoolProfile: React.FC<SchoolProfileProps> = ({ schoolId, onBack, onSave 
     fetchSchoolData();
   }, [schoolId]);
 
-  const handleSectionSave = (section: string, data: any) => {
-    setSchoolData((prev: any) => ({
-      ...prev,
-      [section]: data,
-    }));
-
-    toast({
-      title: "Section saved",
-      description: `${section} information has been saved.`,
-      variant: "default",
-    });
+  const handleSectionSave = (data: object) => {
+    setSchoolData((prev) => (prev ? { ...prev, ...data } : prev));
+    toastDemoAction("Section saved");
   };
 
   const handleSaveAll = async () => {
+    if (!schoolData) return;
     setSaving(true);
     try {
       if (schoolId) {
-        await schoolService.updateSchool(schoolId, schoolData);
+        const result = await schoolService.updateSchool(schoolId, schoolData);
+        toastWriteResult("School information saved", result);
+        if (result.ok) {
+          onSave(schoolData);
+        }
       } else {
-        await onSave(schoolData);
+        onSave(schoolData);
+        toastDemoAction("School information saved");
       }
-      
-      toast({
-        title: "Success",
-        description: "School information has been saved successfully.",
-        variant: "default",
-      });
     } catch (err) {
       console.error("Error saving school data:", err);
       toast({
@@ -130,6 +128,7 @@ const SchoolProfile: React.FC<SchoolProfileProps> = ({ schoolId, onBack, onSave 
   return (
     <div className="space-y-6">
       <Toaster />
+      <DemoBanner />
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="icon" onClick={onBack}>
@@ -177,50 +176,50 @@ const SchoolProfile: React.FC<SchoolProfileProps> = ({ schoolId, onBack, onSave 
             <CardContent className="pt-6">
               <TabsContent value="basic-info">
                 <SchoolBasicInfo 
-                  initialData={schoolData} 
-                  onSave={(data) => handleSectionSave("basicInfo", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="primary-contact">
                 <SchoolPrimaryContact 
-                  initialData={schoolData?.primaryContact} 
-                  onSave={(data) => handleSectionSave("primaryContact", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="secondary-contact">
                 <SchoolSecondaryContact 
-                  initialData={schoolData?.secondaryContact} 
-                  onSave={(data) => handleSectionSave("secondaryContact", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="finance-contact">
                 <SchoolFinanceContact 
-                  initialData={schoolData?.financeContact} 
-                  onSave={(data) => handleSectionSave("financeContact", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="sendco-contact">
                 <SchoolSendcoContact 
-                  initialData={schoolData?.sendcoContact} 
-                  onSave={(data) => handleSectionSave("sendcoContact", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="headteacher-contact">
                 <SchoolHeadteacherContact 
-                  initialData={schoolData?.headteacherContact} 
-                  onSave={(data) => handleSectionSave("headteacherContact", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               
               <TabsContent value="additional-info">
                 <SchoolAdditionalInfo 
-                  initialData={schoolData} 
-                  onSave={(data) => handleSectionSave("additionalInfo", data)} 
+                  initialData={schoolData ?? undefined} 
+                  onSave={(data) => handleSectionSave(data)} 
                 />
               </TabsContent>
               

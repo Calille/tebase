@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { School } from "@/services/schoolService";
 
 // Define the form schema
 const additionalInfoSchema = z.object({
@@ -33,8 +34,8 @@ type AdditionalInfoValues = z.infer<typeof additionalInfoSchema>;
 
 interface SchoolAdditionalInfoProps {
   schoolId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: Partial<School>;
+  onSave?: (data: AdditionalInfoValues) => void;
   readOnly?: boolean;
 }
 
@@ -54,7 +55,9 @@ const SchoolAdditionalInfo = ({
   const form = useForm<AdditionalInfoValues>({
     resolver: zodResolver(additionalInfoSchema),
     defaultValues: {
-      specialPrograms: initialData?.specialPrograms ? initialData.specialPrograms.join(", ") : "",
+      specialPrograms: (initialData?.specialPrograms
+        ? initialData.specialPrograms.join(", ")
+        : "") as unknown as AdditionalInfoValues["specialPrograms"],
       keyDates: initialData?.keyDates || [],
       substituteRequirements: initialData?.substituteRequirements || "",
       historicalPlacementNotes: initialData?.historicalPlacementNotes || "",

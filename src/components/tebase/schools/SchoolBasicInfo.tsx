@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
+import { School } from "@/services/schoolService";
 
 // Define the form schema
 const basicInfoSchema = z.object({
@@ -34,8 +35,8 @@ type BasicInfoValues = z.infer<typeof basicInfoSchema>;
 
 interface SchoolBasicInfoProps {
   schoolId?: string;
-  initialData?: any;
-  onSave?: (data: any) => void;
+  initialData?: Partial<School>;
+  onSave?: (data: BasicInfoValues) => void;
   readOnly?: boolean;
 }
 
@@ -63,7 +64,9 @@ const SchoolBasicInfo = ({
       district: initialData?.district || "",
       yearEstablished: initialData?.yearEstablished || undefined,
       numberOfStudents: initialData?.numberOfStudents || undefined,
-      gradeLevels: initialData?.gradeLevels ? initialData.gradeLevels.join(", ") : "",
+      gradeLevels: (initialData?.gradeLevels
+        ? initialData.gradeLevels.join(", ")
+        : "") as unknown as BasicInfoValues["gradeLevels"],
       schoolHours: initialData?.schoolHours || "",
     },
   });
